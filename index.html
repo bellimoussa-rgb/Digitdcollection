@@ -92,7 +92,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
   input,select{font-size:16px}
   textarea{font-size:18px;padding-top:16px;padding-bottom:16px}
 }
-@media (max-width:600px),(max-height:520px){body.run header h1,body.run #fn,body.run #ln,body.run #pid{display:none}}
+@media (max-width:600px),(max-height:520px){body.run header h1,body.run #fn,body.run #ln{display:none}}
 </style>
 </head>
 <body>
@@ -101,7 +101,6 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
   <h1>Digital data collection tool</h1>
   <input id="fn" placeholder="First name" autocomplete="off" aria-label="First name">
   <input id="ln" placeholder="Last name" autocomplete="off" aria-label="Last name">
-  <input id="pid" placeholder="Participant ID" autocomplete="off" aria-label="Participant ID">
   <label id="durl" for="dur">Session length <select id="dur"><option value="15">15 minutes</option><option value="25" selected>25 minutes</option></select></label>
   <button class="p" id="start">Start session</button>
   <div id="clock" hidden><span id="tm">00:00</span><span id="tl">remaining</span></div>
@@ -151,24 +150,6 @@ var IDLE=5000;
 function limMin(S){return S.limit===15?15:25}
 function limMs(S){return limMin(S)*60000}
 function p2(n){return (n<10?'0':'')+n}
-/* ===== Algiers time (Africa/Algiers, UTC+1 all year) used for the report and the database ===== */
-var TZ='Africa/Algiers';
-function algParts(ms){
-  var o={};
-  try{
-    new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(new Date(ms)).forEach(function(x){o[x.type]=x.value});
-    if(!o.year||!o.hour)throw 0;
-    if(o.hour==='24')o.hour='00';
-  }catch(e){
-    var s=new Date(ms+3600000);
-    o={year:String(s.getUTCFullYear()),month:p2(s.getUTCMonth()+1),day:p2(s.getUTCDate()),hour:p2(s.getUTCHours()),minute:p2(s.getUTCMinutes()),second:p2(s.getUTCSeconds())};
-  }
-  return o;
-}
-function algDate(ms){var o=algParts(ms);return o.year+'-'+o.month+'-'+o.day}
-function algTime(ms){var o=algParts(ms);return o.hour+':'+o.minute+':'+o.second}
-function algFull(ms){var o=algParts(ms);return o.day+'/'+o.month+'/'+o.year+' '+o.hour+':'+o.minute+':'+o.second+' (Algiers time)'}
-function hms(ms){var s=Math.max(0,Math.round(ms/1000));return p2(Math.floor(s/3600))+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60)}
 function fmt(ms){var s=Math.max(0,Math.round(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+':'+p2(m):p2(m))+':'+p2(s%60)}
 function diff(a,b){
   var n=Math.min(a.length,b.length),p=0;
@@ -375,14 +356,12 @@ function reportBlocks(S,A,now){
   T('Digital data collection tool',{b:1,sz:36,after:40});
   T('Typing session report',{sz:26,color:'595959',after:240});
   B.push({tbl:{widths:[.34,.66],labelCol:1,rows:[
-    ['Participant ID',S.pid||'\u2013'],
     ['Participant',(S.fn+' '+S.ln).trim()],
-    ['Time zone','Algiers (Africa/Algiers, UTC+1)'],
-    ['Session started',algFull(S.start)],
-    ['Report created',algFull(now)],
+    ['Session started',new Date(S.start).toLocaleString()],
+    ['Report created',new Date(now).toLocaleString()],
     ['Allotted time',LL],
     ['Time elapsed at export',fmt(el)],
-    ['Status',ended?'The allotted time ended at '+algTime(S.start+LMS)+' (Algiers time)'+'. The session stayed open for '+fmt(el-LMS)+' afterwards.':'Exported before the allotted time ended ('+fmt(LMS-el)+' remaining).']
+    ['Status',ended?'The allotted time ended at '+new Date(S.start+LMS).toLocaleTimeString()+'. The session stayed open for '+fmt(el-LMS)+' afterwards.':'Exported before the allotted time ended ('+fmt(LMS-el)+' remaining).']
   ]}});
   H('Typing time and volume');
   B.push({tbl:{widths:[.34,.22,.22,.22],labelCol:1,head:['Measure','Within '+LL,'After '+LL,'Total'],rows:[
@@ -484,7 +463,7 @@ async function aesZip(files,password){
 var $=function(i){return document.getElementById(i)};
 var PASSCODE='research001',KEY='dct_v1';
 var ta=$('ta'),S=fresh(),over=false,timer=null,tickN=0,dirty=false,armed=null,msgT=null,audio=null,warned=false;
-function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',pid:'',exported:null,limit:25,wmin:150,wmax:300}}
+function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',exported:null,limit:25,wmin:150,wmax:300}}
 
 /* ---- Storage ---- */
 function load(){
@@ -580,17 +559,16 @@ function resetSubmit(){
   $('errbar').hidden=true;$('dlink').hidden=true;$('dshare').hidden=true;$('msg').textContent='';
 }
 $('start').onclick=function(){
-  if(!S.pid.trim()){say('Enter the participant ID before starting.');return}
   if(!S.fn.trim()||!S.ln.trim()){say('Enter first and last name before starting.');return}
   if(S.start!==null)return;
   try{audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.resume)audio.resume()}catch(e){}
-  S=Object.assign(fresh(),{fn:S.fn,ln:S.ln,pid:S.pid.trim(),limit:$('dur').value==='15'?15:25,wmin:S.wmin,wmax:S.wmax});resetSubmit();
+  S=Object.assign(fresh(),{fn:S.fn,ln:S.ln,limit:$('dur').value==='15'?15:25,wmin:S.wmin,wmax:S.wmax});resetSubmit();
   S.start=Date.now();ta.value='';save();begin();ta.focus();
 };
 
 /* ---- Names ---- */
-function names(){S.fn=$('fn').value;S.ln=$('ln').value;S.pid=$('pid').value;dirty=true}
-$('fn').addEventListener('input',names);$('ln').addEventListener('input',names);$('pid').addEventListener('input',names);
+function names(){S.fn=$('fn').value;S.ln=$('ln').value;dirty=true}
+$('fn').addEventListener('input',names);$('ln').addEventListener('input',names);
 
 /* ---- History: snapshots are appended, never overwritten ---- */
 function snap(force){
@@ -670,21 +648,14 @@ async function submitRemote(c,base,notes,rep,A,now){
   }
   var np=await up(base+'_notes.docx',notes),rp=await up(base+'_report.docx',rep);
   var row={
-    "date":algDate(S.start),
-    participant_id:S.pid.trim(),
-    students_text:S.text,
-    starting_time:algTime(S.start),
-    submission_time:algTime(now),
-    total_writing_time:hms(now-S.start),
-    word_count:A.words,
-    sentence_count:A.sn.a+A.sn.b,
-    session_id:S.sid,notes_path:np,report_path:rp,
-    metrics:{time_zone:'Africa/Algiers',started_at_utc:new Date(S.start).toISOString(),submitted_at_utc:new Date(now).toISOString(),
-      limit_minutes:limMin(S),word_min:S.wmin,word_max:S.wmax,active_typing_seconds:Math.round(A.act/1000),
-      clauses_estimated:A.cl.a+A.cl.b,characters:A.chars,late_text:A.segs.join('\n'),
+    session_id:S.sid,participant_first:S.fn.trim(),participant_last:S.ln.trim(),limit_minutes:limMin(S),
+    started_at:new Date(S.start).toISOString(),submitted_at:new Date(now).toISOString(),elapsed_seconds:Math.round((now-S.start)/1000),
+    text:S.text,paragraphs:S.text.split(/\n+/).filter(function(x){return x.trim()}),late_text:A.segs.join('\n'),
+    metrics:{words:A.words,characters:A.chars,sentences:A.sn.a+A.sn.b,clauses_estimated:A.cl.a+A.cl.b,
       typing_seconds_within:Math.round(A.actIn/1000),typing_seconds_after:Math.round(A.actLate/1000),
       typed_within:A.insIn,typed_after:A.insLate,deleted_within:A.delIn,deleted_after:A.delLate,
-      pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars}
+      word_min:S.wmin,word_max:S.wmax,pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars},
+    notes_path:np,report_path:rp,user_agent:(navigator.userAgent||'').slice(0,200)
   };
   try{await sbFetch(root+'/rest/v1/sessions',{method:'POST',headers:sbHead(c,{'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)})}catch(e){e.where='saving the text and measures';throw e}
 }
@@ -706,7 +677,6 @@ $('dshare').onclick=function(){
 async function doExport(mode,btn){
   var f=S.fn.trim(),l=S.ln.trim();
   if(mode==='submit'&&!cfg()){say('Submission is not set up. The site owner must add the Supabase URL and key to config.js and redeploy.');return}
-  if(!S.pid.trim()){say('Enter the participant ID first.');return}
   if(!f||!l){say('Enter first and last name first.');return}
   if(S.start===null){say('Start the session first.');return}
   if(!window.crypto||!crypto.subtle){say('Encryption is not available in this browser view. Open the file directly in Chrome, Edge, Firefox or Safari.');return}
@@ -741,7 +711,7 @@ $('nw').onclick=function(){
   var b=$('nw');
   if(armed){
     clearTimeout(armed);armed=null;clearInterval(timer);
-    var n={fn:S.fn,ln:S.ln,limit:limMin(S),wmin:S.wmin,wmax:S.wmax};S=Object.assign(fresh(),n);over=false;resetSubmit();$('pid').value='';
+    var n={fn:S.fn,ln:S.ln,limit:limMin(S),wmin:S.wmin,wmax:S.wmax};S=Object.assign(fresh(),n);over=false;resetSubmit();
     document.body.classList.remove('over','run');unlock();$('bn').hidden=true;$('clock').hidden=true;$('start').hidden=false;$('durl').hidden=false;$('dur').value=String(limMin(S));
     $('bi').style.width='0';ta.value='';ta.readOnly=true;$('ty').textContent='Typing time 00:00';
     b.textContent='New session';save();renderHist();stats();say('Ready for a new session.');
@@ -803,7 +773,7 @@ if(/[?&]check\b/.test(location.search)){
       var tiny=await buildDocx([{p:'connection test',o:{}}]),dir='check_'+Date.now();
       try{await sbFetch(root+'/storage/v1/object/'+encodeURIComponent(cc.bucket)+'/'+dir+'/test.docx',{method:'POST',headers:sbHead(cc,{'Content-Type':MIME,'x-upsert':'false'}),body:new Blob([tiny],{type:MIME})});L('4. File upload: OK')}
       catch(e){e.where='uploading the test file';L('4. File upload: FAILED\n   '+explain(e))}
-      var tn=Date.now(),row={"date":algDate(tn),participant_id:'TEST',students_text:'connection test',starting_time:algTime(tn),submission_time:algTime(tn),total_writing_time:'00:00:00',word_count:2,sentence_count:1,session_id:'check-'+tn,metrics:{}};
+      var row={session_id:'check-'+Date.now(),participant_first:'TEST',participant_last:'TEST',limit_minutes:15,text:'connection test',paragraphs:['connection test'],metrics:{},submitted_at:new Date().toISOString()};
       try{await sbFetch(root+'/rest/v1/sessions',{method:'POST',headers:sbHead(cc,{'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)});L('5. Saving a row: OK')}
       catch(e){e.where='saving the test row';L('5. Saving a row: FAILED\n   '+explain(e))}
       L('\nIf both steps say OK, Submit will work. Delete the TEST row in Supabase afterwards.');
@@ -833,7 +803,7 @@ $('wmax').addEventListener('input',function(){rangeRead(false)});
 $('wmin').addEventListener('change',function(){rangeRead(true)});
 $('wmax').addEventListener('change',function(){rangeRead(true)});
 rangeInit();
-$('fn').value=S.fn;$('ln').value=S.ln;$('pid').value=S.pid||'';ta.value=S.text;renderHist();stats();
+$('fn').value=S.fn;$('ln').value=S.ln;ta.value=S.text;renderHist();stats();
 if(S.start!==null)begin();
 })();
 </script>
