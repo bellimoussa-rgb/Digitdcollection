@@ -12,9 +12,9 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: one full-height writing surface under a thin timer bar; history opens as a side panel. */
-:root{--bg:#faf7f2;--panel:#f1ece3;--fg:#2a2622;--mute:#7a7167;--line:#ddd5c8;--acc:#8a4b2a;--acc-fg:#ffffff;--late:#b3261e;--late-bg:#fbe9e7;--track:#e6dfd3}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1b19;--panel:#262320;--fg:#ece6dc;--mute:#9a9186;--line:#3a352f;--acc:#d9915f;--acc-fg:#1d1b19;--late:#ff8f85;--late-bg:#3a2321;--track:#322e29;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#1d1b19;--panel:#262320;--fg:#ece6dc;--mute:#9a9186;--line:#3a352f;--acc:#d9915f;--acc-fg:#1d1b19;--late:#ff8f85;--late-bg:#3a2321;--track:#322e29;color-scheme:dark}
+:root{--bg:#faf7f2;--panel:#f1ece3;--fg:#2a2622;--mute:#7a7167;--line:#ddd5c8;--acc:#8a4b2a;--acc-fg:#ffffff;--late:#b3261e;--late-bg:#fbe9e7;--track:#e6dfd3;--ok:#2e7d32}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1b19;--panel:#262320;--fg:#ece6dc;--mute:#9a9186;--line:#3a352f;--acc:#d9915f;--acc-fg:#1d1b19;--late:#ff8f85;--late-bg:#3a2321;--track:#322e29;--ok:#6fcf97;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1d1b19;--panel:#262320;--fg:#ece6dc;--mute:#9a9186;--line:#3a352f;--acc:#d9915f;--acc-fg:#1d1b19;--late:#ff8f85;--late-bg:#3a2321;--track:#322e29;--ok:#6fcf97;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:Georgia,'Times New Roman',serif;display:flex;flex-direction:column;padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -42,6 +42,19 @@ textarea{flex:1;width:100%;border:0;outline:0;resize:none;background:var(--bg);c
 textarea:read-only{color:var(--mute)}
 #st{font:12px system-ui,sans-serif;color:var(--mute);padding:6px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 #msg{color:var(--acc)}
+#wc{font-family:system-ui,sans-serif;font-size:13px;padding:10px 0 8px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+#wc-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+#wc-n{font-size:15px;margin-right:auto}
+#wc label{display:flex;align-items:center;gap:6px;color:var(--mute)}
+#wc input{width:76px;padding:4px 6px}
+#wbar{position:relative;height:12px;background:var(--track);border-radius:6px;overflow:hidden}
+#wbi{display:block;height:100%;width:0;background:var(--acc);transition:width .15s,background-color .15s}
+#wmk{position:absolute;top:0;bottom:0;width:2px;background:var(--fg);opacity:.55;left:0}
+#wc.ok #wbi{background:var(--ok)}
+#wc.max #wbi{background:var(--late)}
+#wc.ok #wc-s{color:var(--ok)}
+#wc.max #wc-s{color:var(--late)}
+#wc-s{color:var(--mute)}
 #dlink{color:var(--acc);font-weight:600}
 #cp{background:none;border:0;color:var(--mute);padding:0 4px;font:14px system-ui,sans-serif;line-height:1}
 #cp:hover{color:var(--fg)}
@@ -75,7 +88,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
 @media (pointer:coarse){button,input,select{min-height:44px}#cp{min-width:44px;min-height:44px}.it button{min-height:36px}}
 @media (max-width:600px){
   header h1{flex:1 0 100%}
-  input{flex:1 1 130px;width:auto}
+  header input{flex:1 1 130px;width:auto}
   input,select{font-size:16px}
   textarea{font-size:18px;padding-top:16px;padding-bottom:16px}
 }
@@ -108,6 +121,15 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
 <main>
   <div id="w">
     <textarea id="ta" readonly placeholder="Choose the session length, enter your name, then press Start. The timer begins straight away. Pasting is disabled." spellcheck="false" inputmode="text" enterkeyhint="enter" writingsuggestions="false" autocomplete="off" autocorrect="off" autocapitalize="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
+    <div id="wc">
+      <div id="wc-top">
+        <strong id="wc-n">0 words</strong>
+        <label for="wmin">Minimum <input id="wmin" type="number" min="0" step="10" inputmode="numeric" aria-label="Minimum word count"></label>
+        <label for="wmax">Maximum <input id="wmax" type="number" min="1" step="10" inputmode="numeric" aria-label="Maximum word count"></label>
+      </div>
+      <div id="wbar" role="progressbar" aria-label="Word count progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="wbi"></i><b id="wmk"></b></div>
+      <div id="wc-s"></div>
+    </div>
     <div id="st"><span id="info">0 words</span><span><span id="msg" role="status" aria-live="polite"></span> <a id="dlink" href="#" hidden></a> <button id="dshare" hidden>Save or share</button></span><span><span id="ty">Typing time 00:00</span> <button id="cp" aria-label="Copyright and disclaimer" title="Copyright and disclaimer">©</button></span></div>
   </div>
   <aside id="side"><h2>Session history <button id="hx">Close</button></h2><div id="list"></div></aside>
@@ -357,6 +379,7 @@ function reportBlocks(S,A,now){
     ['Pauses longer than 5 seconds',String(A.pauses)],
     ['Longest pause',A.longest?fmt(A.longest)+' (began at '+fmt(A.longestAt)+')':'None'],
     ['Words in the final notes',String(A.words)],
+    ['Word range set by participant',S.wmin+' to '+S.wmax+' words'],
     ['Characters in the final notes',String(A.chars)],
     ['Characters in the final notes typed after '+LL,String(A.lateChars)],
     ['History snapshots saved',String(S.hist.length)],
@@ -440,7 +463,7 @@ async function aesZip(files,password){
 var $=function(i){return document.getElementById(i)};
 var PASSCODE='research001',KEY='dct_v1';
 var ta=$('ta'),S=fresh(),over=false,timer=null,tickN=0,dirty=false,armed=null,msgT=null,audio=null,warned=false;
-function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',exported:null,limit:25}}
+function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',exported:null,limit:25,wmin:150,wmax:300}}
 
 /* ---- Storage ---- */
 function load(){
@@ -504,9 +527,22 @@ function tick(){
   if(el>=L&&!over){over=true;document.body.classList.add('over');$('bn').hidden=false;beep()}
   if(tickN++%4===0){stats();if(dirty)save()}
 }
+function wcUpdate(w){
+  var mn=S.wmin,mx=S.wmax,box=$('wc'),st;
+  $('wc-n').textContent=w+(w===1?' word':' words');
+  $('wbi').style.width=Math.min(100,w/mx*100)+'%';
+  $('wmk').style.left='calc('+Math.min(100,mn/mx*100)+'% - 1px)';
+  $('wbar').setAttribute('aria-valuenow',String(Math.round(Math.min(100,w/mx*100))));
+  box.classList.remove('ok','max');
+  if(w<mn){var d=mn-w;st=d+(d===1?' more word':' more words')+' to reach the minimum of '+mn+'.'}
+  else if(w<=mx){box.classList.add('ok');st='Within your range ('+mn+'–'+mx+'). '+(mx-w)+' words left before the maximum.'}
+  else{box.classList.add('max');var o=w-mx;st=o+(o===1?' word':' words')+' over the maximum of '+mx+'.'}
+  $('wc-s').textContent=st;
+}
 function stats(){
-  var t=S.text.trim();
-  $('info').textContent=(t?t.split(/\s+/).length:0)+' words · '+S.text.length+' characters';
+  var t=S.text.trim(),wn=t?t.split(/\s+/).length:0;
+  $('info').textContent=wn+' words · '+S.text.length+' characters';
+  wcUpdate(wn);
   if(S.start!==null){
     var A=analyze(S);
     $('ty').textContent='Typing time '+fmt(A.act)+(over||A.actLate?' · after time '+fmt(A.actLate):'');
@@ -518,11 +554,15 @@ function begin(){
   if(el>=limMs(S)){over=true;document.body.classList.add('over');$('bn').hidden=false}
   clearInterval(timer);timer=setInterval(tick,250);tick();
 }
+function resetSubmit(){
+  var b=$('sub');b.textContent='Submit';b.disabled=false;
+  $('errbar').hidden=true;$('dlink').hidden=true;$('dshare').hidden=true;$('msg').textContent='';
+}
 $('start').onclick=function(){
   if(!S.fn.trim()||!S.ln.trim()){say('Enter first and last name before starting.');return}
   if(S.start!==null)return;
   try{audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.resume)audio.resume()}catch(e){}
-  S=Object.assign(fresh(),{fn:S.fn,ln:S.ln,limit:$('dur').value==='15'?15:25});
+  S=Object.assign(fresh(),{fn:S.fn,ln:S.ln,limit:$('dur').value==='15'?15:25,wmin:S.wmin,wmax:S.wmax});resetSubmit();
   S.start=Date.now();ta.value='';save();begin();ta.focus();
 };
 
@@ -614,7 +654,7 @@ async function submitRemote(c,base,notes,rep,A,now){
     metrics:{words:A.words,characters:A.chars,sentences:A.sn.a+A.sn.b,clauses_estimated:A.cl.a+A.cl.b,
       typing_seconds_within:Math.round(A.actIn/1000),typing_seconds_after:Math.round(A.actLate/1000),
       typed_within:A.insIn,typed_after:A.insLate,deleted_within:A.delIn,deleted_after:A.delLate,
-      pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars},
+      word_min:S.wmin,word_max:S.wmax,pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars},
     notes_path:np,report_path:rp,user_agent:(navigator.userAgent||'').slice(0,200)
   };
   try{await sbFetch(root+'/rest/v1/sessions',{method:'POST',headers:sbHead(c,{'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)})}catch(e){e.where='saving the text and measures';throw e}
@@ -671,7 +711,7 @@ $('nw').onclick=function(){
   var b=$('nw');
   if(armed){
     clearTimeout(armed);armed=null;clearInterval(timer);
-    var n={fn:S.fn,ln:S.ln,limit:limMin(S)};S=Object.assign(fresh(),n);over=false;
+    var n={fn:S.fn,ln:S.ln,limit:limMin(S),wmin:S.wmin,wmax:S.wmax};S=Object.assign(fresh(),n);over=false;resetSubmit();
     document.body.classList.remove('over','run');unlock();$('bn').hidden=true;$('clock').hidden=true;$('start').hidden=false;$('durl').hidden=false;$('dur').value=String(limMin(S));
     $('bi').style.width='0';ta.value='';ta.readOnly=true;$('ty').textContent='Typing time 00:00';
     b.textContent='New session';save();renderHist();stats();say('Ready for a new session.');
@@ -743,6 +783,26 @@ if(/[?&]check\b/.test(location.search)){
 }
 $('dur').value=String(limMin(S));
 $('dur').addEventListener('change',function(){if(S.start===null){S.limit=this.value==='15'?15:25;save()}});
+function rangeInit(){
+  if(!(S.wmin>=0))S.wmin=150;
+  if(!(S.wmax>=1))S.wmax=300;
+  if(S.wmax<S.wmin)S.wmax=S.wmin;
+  $('wmin').value=S.wmin;$('wmax').value=S.wmax;
+}
+function rangeRead(fix){
+  var a=parseInt($('wmin').value,10),b=parseInt($('wmax').value,10);
+  if(isNaN(a)||a<0){if(!fix)return;a=S.wmin}
+  if(isNaN(b)||b<1){if(!fix)return;b=S.wmax}
+  if(b<a){if(!fix)return;b=a;say('The maximum cannot be lower than the minimum.')}
+  S.wmin=a;S.wmax=b;
+  if(fix){$('wmin').value=a;$('wmax').value=b}
+  save();stats();
+}
+$('wmin').addEventListener('input',function(){rangeRead(false)});
+$('wmax').addEventListener('input',function(){rangeRead(false)});
+$('wmin').addEventListener('change',function(){rangeRead(true)});
+$('wmax').addEventListener('change',function(){rangeRead(true)});
+rangeInit();
 $('fn').value=S.fn;$('ln').value=S.ln;ta.value=S.text;renderHist();stats();
 if(S.start!==null)begin();
 })();
