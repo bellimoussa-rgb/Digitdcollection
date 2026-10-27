@@ -9,7 +9,7 @@
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
 <script>try{var _t=localStorage.getItem("dct_theme");if(_t==="dark"||_t==="light")document.documentElement.setAttribute("data-theme",_t)}catch(e){}</script>
 <script src="config.js"></script>
-<title>Digdata tool</title>
+<title>Digdata Tool</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: one full-height writing surface under a thin timer bar; history opens as a side panel. */
@@ -106,7 +106,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
 <body>
 
 <header>
-  <h1>Digital data collection tool</h1>
+  <h1>Digdata Tool</h1>
   <input id="fn" placeholder="First name" autocomplete="off" aria-label="First name">
   <input id="ln" placeholder="Last name" autocomplete="off" aria-label="Last name">
   <label id="durl" for="dur">Session length <select id="dur"><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="25" selected>25 minutes</option><option value="custom">Custom…</option></select><input id="dcus" type="number" min="1" max="180" step="1" inputmode="numeric" placeholder="Minutes" aria-label="Custom session length in minutes" hidden></label>
@@ -380,7 +380,7 @@ function reportBlocks(S,A,now){
   function nl(s){return s.replace(/\r?\n/g,'↵')}
   function wpm(ch,ms){return ms>0?(ch/5/(ms/60000)).toFixed(1):'–'}
   var LM=limMin(S),LMS=LM*60000,LL=LM+':00',ended=el>=LMS;
-  T('Digital data collection tool',{b:1,sz:36,after:40});
+  T('Digdata Tool',{b:1,sz:36,after:40});
   T('Typing session report',{sz:26,color:'595959',after:240});
   B.push({tbl:{widths:[.34,.66],labelCol:1,rows:[
     ['Participant',(S.fn+' '+S.ln).trim()],
