@@ -90,6 +90,18 @@ aside h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 body{overscroll-behavior:none}
 body.kb{height:calc(var(--app-h) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+/* Typing mode: while the on-screen keyboard is open, keep only the clock, the word count and the text box */
+body.kb header{padding-block:4px;gap:6px}
+body.kb header #hb,body.kb header #th,body.kb header #exp,body.kb header #nw,body.kb header h1{display:none}
+body.kb #errbar,body.kb #cfgwarn,body.kb #bn,body.kb #lk,body.kb #chk{display:none}
+body.kb main{margin-top:2px}
+body.kb #wc{padding:3px 0;gap:0;border-top:0}
+body.kb #wc label,body.kb #wc-s,body.kb #wbar{display:none}
+body.kb #wc-n{font-size:13px}
+body.kb #st{display:none}
+body.kb #prd{margin-top:2px;padding:4px 10px}
+body.kb #prt{max-height:22vh;font-size:15px;line-height:1.5}
+body.kb textarea{padding:8px 4px;line-height:1.5}
 textarea{-webkit-appearance:none;appearance:none;border-radius:0}
 body:not(.run) #exp,body:not(.run) #hb,body:not(.run) #nw{display:none}
 #chk{font:13px/1.5 system-ui,sans-serif;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-top:8px;background:var(--panel)}
@@ -177,7 +189,10 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
     <p>The timer starts the moment you press the button below. During the session:</p>
     <ul>
       <li><b>Do not leave this page.</b> Do not switch to another app, tab or window.</li>
-      <li>Remember, this is just a first draft. </b>Mistakes are normal part of learning.</b></li>
+      <li>The <b>first time</b> you leave, you get a warning. The <b>second time</b>, writing is blocked for the rest of the session.</li>
+      <li>Every time you leave is recorded and reported to the researcher.</li>
+      <li class="ok">Your screen going to sleep or your phone locking does <b>not</b> count as leaving.</li>
+      <li>Pasting is disabled.</li>
     </ul>
     <div id="pw-row"><button class="p" id="pw-go">I understand, start writing</button><button id="pw-no">Go back</button></div>
   </div>
@@ -881,12 +896,25 @@ function lock(){
 function unlock(){try{if(wl){wl.release();wl=null}}catch(e){}}
 if(window.visualViewport){
   var vv=window.visualViewport;
+  /* Some phones shrink the whole page when the keyboard opens, others only the visual viewport,
+     so compare with the tallest height seen at this width instead of with window.innerHeight. */
+  var baseH=0,baseW=0,wasKb=false;
   var fit=function(){
-    var kb=vv.height<window.innerHeight-80;
+    var h=vv.height,w=Math.round(vv.width);
+    if(w!==baseW){baseW=w;baseH=0}
+    if(h>baseH)baseH=h;
+    var kb=h<baseH-120||(h<=420&&document.activeElement===ta);
     document.body.classList.toggle('kb',kb);
-    if(kb){document.documentElement.style.setProperty('--app-h',vv.height+'px');window.scrollTo(0,0)}
+    if(kb){
+      document.documentElement.style.setProperty('--app-h',h+'px');window.scrollTo(0,0);
+      if(!wasKb){var p=$('prd');if(p)p.open=false}
+    }
+    wasKb=kb;
   };
   vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit);
+  ta.addEventListener('focus',function(){setTimeout(fit,350)});
+  ta.addEventListener('blur',function(){setTimeout(fit,350)});
+  window.addEventListener('orientationchange',function(){baseH=0;setTimeout(fit,400)});
 }
 
 load();
