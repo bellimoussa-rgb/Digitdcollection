@@ -25,6 +25,9 @@ input,button,textarea{font:inherit;color:inherit}
 select{background:var(--panel);color:inherit;font:inherit;border:1px solid var(--line);border-radius:6px;padding:6px 8px}
 #durl{display:flex;align-items:center;gap:6px;color:var(--mute)}
 #dcus{width:90px}
+#prd{margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 14px}
+#prd summary{cursor:pointer;font:600 12px system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+#prt{font:16px/1.6 Georgia,serif;white-space:pre-wrap;margin-top:6px;max-height:30vh;overflow:auto}
 body.warn #tm,body.warn #tl{color:var(--warn)}
 body.warn #bar i{background:var(--warn)}
 input{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:130px;min-width:0}
@@ -66,10 +69,15 @@ textarea:read-only{color:var(--mute)}
 #dlink{color:var(--acc);font-weight:600}
 #cp{background:none;border:0;color:var(--mute);padding:0 4px;font:14px system-ui,sans-serif;line-height:1}
 #cp:hover{color:var(--fg)}
-#about,#lvm,#cfm{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(0,0,0,.45)}
-#ab-card,#lv-card,#cf-card{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:420px;width:100%;font:14px/1.6 system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}
-#ab-card h2,#lv-card h2,#cf-card h2{font:600 17px Georgia,serif;margin:0}
-#ab-card p,#lv-card p,#cf-card p{margin:0}
+#about,#lvm,#cfm,#pwm{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(0,0,0,.45)}
+#ab-card,#lv-card,#cf-card,#pw-card{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:420px;width:100%;font:14px/1.6 system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}
+#ab-card h2,#lv-card h2,#cf-card h2,#pw-card h2{font:600 17px Georgia,serif;margin:0}
+#ab-card p,#lv-card p,#cf-card p,#pw-card p{margin:0}
+#pw-card{border-color:var(--warn);max-height:calc(100vh - 32px);overflow:auto}
+#pw-card h2{color:var(--warn);font-size:19px}
+#pw-card ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+#pw-card .ok{color:var(--ok)}
+#pw-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 #ab-card button,#lv-card button{align-self:flex-start;margin-top:4px}
 aside{display:none;width:260px;border-left:1px solid var(--line);background:var(--panel);overflow:auto;font-family:system-ui,sans-serif;font-size:13px}
 aside.open{display:block}
@@ -123,6 +131,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
 <div id="cfgwarn" role="alert" hidden>Setup needed: the Supabase URL and key are missing in config.js, so Submit cannot send anything yet. Add them and redeploy.</div>
 <div id="lk" role="alert" hidden>Writing is blocked because you left the session twice. Your text so far is kept and you can still submit it.</div>
 <div id="bn" role="status" hidden>Time is up. Everything you type from now on is recorded as typed after the allotted time.</div>
+<details id="prd" open hidden><summary>Writing prompt</summary><div id="prt"></div></details>
 <section id="chk" hidden>
   <p><b>Connection test.</b> It uploads one small test file and adds one test row (named TEST) to your Supabase project. Delete the TEST row afterwards in Table Editor.</p>
   <button class="p" id="chkgo">Run connection test</button>
@@ -130,7 +139,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
 </section>
 <main>
   <div id="w">
-    <textarea id="ta" readonly placeholder="Choose the session length, enter your name, then press Start. The timer begins straight away. Pasting is disabled." spellcheck="false" inputmode="text" enterkeyhint="enter" writingsuggestions="false" autocomplete="off" autocorrect="off" autocapitalize="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
+    <textarea id="ta" readonly placeholder="Choose the session length, enter your name, then press Start. The timer begins straight away and the writing prompt appears. Pasting is disabled." spellcheck="false" inputmode="text" enterkeyhint="enter" writingsuggestions="false" autocomplete="off" autocorrect="off" autocapitalize="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
     <div id="wc">
       <div id="wc-top">
         <strong id="wc-n">0 words</strong>
@@ -159,6 +168,18 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
     <ul id="cf-sum"></ul>
     <p>Once submitted, your text is sent to the researcher.</p>
     <div id="cf-row"><button class="p" id="cf-go">Submit now</button><button id="cf-no">Keep writing</button></div>
+  </div>
+</div>
+
+<div id="pwm" role="alertdialog" aria-modal="true" aria-labelledby="pw-t" hidden>
+  <div id="pw-card">
+    <h2 id="pw-t">⚠ Warning: read before you start</h2>
+    <p>The timer starts the moment you press the button below. During the session:</p>
+    <ul>
+      <li><b>Do not leave this page.</b> Do not switch to another app, tab or window.</li>
+      <li>Remember, this is just a first draft. Mistakes are normal part of learning.</li>
+    </ul>
+    <div id="pw-row"><button class="p" id="pw-go">I understand, start writing</button><button id="pw-no">Go back</button></div>
   </div>
 </div>
 
@@ -387,6 +408,7 @@ function reportBlocks(S,A,now){
     ['Session started',new Date(S.start).toLocaleString()],
     ['Report created',new Date(now).toLocaleString()],
     ['Allotted time',LL],
+    ['Writing prompt',S.prompt||'None'],
     ['Time elapsed at export',fmt(el)],
     ['Status',ended?'The allotted time ended at '+new Date(S.start+LMS).toLocaleTimeString()+'. The session stayed open for '+fmt(el-LMS)+' afterwards.':'Exported before the allotted time ended ('+fmt(LMS-el)+' remaining).']
   ]}});
@@ -411,6 +433,7 @@ function reportBlocks(S,A,now){
     ['Characters in the final notes typed after '+LL,String(A.lateChars)],
     ['Times the participant left the session',S.leaves?S.leaves+' ('+S.leaveLog.map(function(r){return 'at '+fmt(r.t)+', away '+fmt(r.away||0)}).join('; ')+')':'0'],
     ['Writing blocked after leaving twice',S.blocked?'Yes':'No'],
+    ['Screen off or phone locked (not counted as leaving)',String(S.sleeps||0)],
     ['History snapshots saved',String(S.hist.length)],
     ['Restores from history',S.restores.length?S.restores.length+' (at '+S.restores.map(function(r){return fmt(r.t)}).join(', ')+')':'0']
   ]}});
@@ -492,7 +515,9 @@ async function aesZip(files,password){
 var $=function(i){return document.getElementById(i)};
 var PASSCODE='research001',KEY='dct_v1';
 var ta=$('ta'),S=fresh(),over=false,timer=null,tickN=0,dirty=false,armed=null,msgT=null,audio=null,warned=false,grace=0,hideAt=0,warned1=false;
-function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',exported:null,limit:25,wmin:150,wmax:300,leaves:0,leaveLog:[],blocked:false,pending:0,done:false}}
+function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',exported:null,limit:25,wmin:150,wmax:300,leaves:0,leaveLog:[],blocked:false,pending:0,done:false,prompt:'',sleeps:0}}
+function cfgPrompt(){var c=window.DCT_CONFIG;return c&&typeof c.prompt==='string'?c.prompt.trim():''}
+function showPrompt(){var p=(S.prompt||'');$('prd').hidden=!p;$('prt').textContent=p}
 
 /* ---- Storage ---- */
 function load(){
@@ -582,7 +607,7 @@ function stats(){
   }
 }
 function begin(){
-  $('start').hidden=true;$('durl').hidden=true;$('clock').hidden=false;ta.readOnly=!!S.blocked;document.body.classList.add('run');lock();leaveNotice();
+  $('start').hidden=true;$('durl').hidden=true;$('clock').hidden=false;ta.readOnly=!!S.blocked;document.body.classList.add('run');showPrompt();lock();leaveNotice();
   var el=Date.now()-S.start;
   warned1=(limMs(S)-el)<=60000;
   if(el>=limMs(S)){over=true;document.body.classList.add('over');$('bn').hidden=false}
@@ -598,8 +623,18 @@ $('start').onclick=function(){
   if(S.start!==null)return;
   var dm=durGet();
   if(!dm){say('Enter a custom length between 1 and 180 minutes.');$('dcus').focus();return}
+  pwOpen(true);
+};
+function pwOpen(o){$('pwm').hidden=!o;if(o)$('pw-go').focus()}
+$('pw-no').onclick=function(){pwOpen(false)};
+$('pwm').addEventListener('click',function(e){if(e.target===$('pwm'))pwOpen(false)});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('pwm').hidden)pwOpen(false)});
+$('pw-go').onclick=function(){
+  pwOpen(false);
+  if(S.start!==null)return;
+  var dm=durGet();if(!dm)return;
   try{audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.resume)audio.resume()}catch(e){}
-  S=Object.assign(fresh(),{fn:S.fn,ln:S.ln,limit:dm,wmin:S.wmin,wmax:S.wmax});resetSubmit();
+  S=Object.assign(fresh(),{fn:S.fn,ln:S.ln,limit:dm,wmin:S.wmin,wmax:S.wmax,prompt:cfgPrompt()});resetSubmit();
   S.start=Date.now();ta.value='';save();begin();ta.focus();
 };
 
@@ -691,7 +726,7 @@ async function submitRemote(c,base,notes,rep,A,now){
     metrics:{words:A.words,characters:A.chars,sentences:A.sn.a+A.sn.b,clauses_estimated:A.cl.a+A.cl.b,
       typing_seconds_within:Math.round(A.actIn/1000),typing_seconds_after:Math.round(A.actLate/1000),
       typed_within:A.insIn,typed_after:A.insLate,deleted_within:A.delIn,deleted_after:A.delLate,
-      word_min:S.wmin,word_max:S.wmax,left_session:S.leaves,writing_blocked:!!S.blocked,pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars},
+      prompt:S.prompt||null,word_min:S.wmin,word_max:S.wmax,left_session:S.leaves,screen_off:S.sleeps||0,writing_blocked:!!S.blocked,pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars},
     notes_path:np,report_path:rp,user_agent:(navigator.userAgent||'').slice(0,200)
   };
   try{await sbFetch(root+'/rest/v1/sessions',{method:'POST',headers:sbHead(c,{'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)})}catch(e){e.where='saving the text and measures';throw e}
@@ -771,7 +806,7 @@ $('nw').onclick=function(){
     clearTimeout(armed);armed=null;clearInterval(timer);
     var n={fn:S.fn,ln:S.ln,limit:limMin(S),wmin:S.wmin,wmax:S.wmax};S=Object.assign(fresh(),n);over=false;resetSubmit();
     document.body.classList.remove('over','run','warn');warned1=false;unlock();$('bn').hidden=true;$('clock').hidden=true;$('start').hidden=false;$('durl').hidden=false;durSet(limMin(S));
-    $('bi').style.width='0';ta.value='';ta.readOnly=true;$('ty').textContent='Typing time 00:00';
+    showPrompt();$('bi').style.width='0';ta.value='';ta.readOnly=true;$('ty').textContent='Typing time 00:00';
     b.textContent='New session';save();renderHist();stats();say('Ready for a new session.');
     return;
   }
@@ -812,11 +847,18 @@ function leaveNotice(){
   $('lvm').hidden=false;$('lv-x').focus();
 }
 $('lv-x').onclick=function(){$('lvm').hidden=true;if(!S.blocked)ta.focus()};
+/* Screen sleep and phone lock hide the page without the window first losing focus.
+   Switching app, tab or window loses focus first, so only that counts as leaving. */
+var blurAt=0;
+window.addEventListener('blur',function(){blurAt=Date.now()});
+window.addEventListener('focus',function(){blurAt=0});
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){
     if(S.start!==null&&!S.blocked&&!S.done&&Date.now()>=grace){
-      hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0});
-      if(S.leaves>=2){S.blocked=true;S.pending=2;ta.readOnly=true}else S.pending=1;
+      if(blurAt&&Date.now()-blurAt<2500){
+        hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0});
+        if(S.leaves>=2){S.blocked=true;S.pending=2;ta.readOnly=true}else S.pending=1;
+      }else{hideAt=0;S.sleeps=(S.sleeps||0)+1}
     }else hideAt=0;
     save();
   }else{
