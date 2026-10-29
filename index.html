@@ -185,7 +185,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
   <div id="cf-card">
     <h2 id="cf-t">Submit your writing?</h2>
     <ul id="cf-sum"></ul>
-    <p>Once submitted, your text is sent to the researcher.</p>
+    <p>Once submitted, your text is sent to the teacher.</p>
     <div id="cf-row"><button class="p" id="cf-go">Submit now</button><button id="cf-no">Keep writing</button></div>
   </div>
 </div>
@@ -207,7 +207,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
   <div id="ab-card">
     <h2 id="ab-t">Copyright and disclaimer</h2>
     <p>© 2026 Moussa Belli</p>
-    <p>This tool is a web application developed using Claude AI by Moussa Belli, PhD researcher in English Didactics from the University of Jijel, for research purposes.</p>
+    <p>This tool is a web application developed using AI by Moussa Belli, PhD researcher in English Didactics from the University of Jijel, for research purposes.</p>
     <button class="p" id="ab-x">Close</button>
   </div>
 </div>
@@ -547,7 +547,15 @@ function overUi(el,L){
   if(t!==lastOv){lastOv=t;$('bn').textContent=t}
   $('bn').hidden=false;
 }
-function cfgPrompt(){var c=window.DCT_CONFIG;return c&&typeof c.prompt==='string'?c.prompt.trim():''}
+/* ---- Writing task prompt ----
+   Shown in the "Writing prompt" box as soon as the session starts.
+   PLACEHOLDER: replace the text below with your real writing task.
+   (Alternatively set  prompt: "..."  in config.js, which takes priority over this default.) */
+var DEFAULT_PROMPT='[Placeholder writing task] Replace this note with your own prompt. For example: "Describe a memorable experience that taught you something important. Explain what happened and why it mattered to you."';
+function cfgPrompt(){
+  var c=window.DCT_CONFIG,p=c&&typeof c.prompt==='string'?c.prompt.trim():'';
+  return p||DEFAULT_PROMPT;
+}
 function showPrompt(){var p=(S.prompt||'');$('prd').hidden=!p;$('prt').textContent=p}
 
 /* ---- Storage ---- */
