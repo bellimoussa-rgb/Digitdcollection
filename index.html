@@ -551,7 +551,9 @@ function overUi(el,L){
    Shown in the "Writing prompt" box as soon as the session starts.
    PLACEHOLDER: replace the text below with your real writing task.
    (Alternatively set  prompt: "..."  in config.js, which takes priority over this default.) */
-var DEFAULT_PROMPT='[Placeholder writing task] Replace this note with your own prompt. For example: "Describe a memorable experience that taught you something important. Explain what happened and why it mattered to you."';
+var DEFAULT_PROMPT='Poor concentration is a common problem among university students. Explain two causes of poor concentration and two effects of poor concentration on students’ daily lives.
+
+Directions: You have 25 minutes. Write one paragraph of 100–120 words.';
 function cfgPrompt(){
   var c=window.DCT_CONFIG,p=c&&typeof c.prompt==='string'?c.prompt.trim():'';
   return p||DEFAULT_PROMPT;
