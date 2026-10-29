@@ -48,8 +48,8 @@ body.over #bar i{background:var(--late)}
 #lk{font:13px system-ui,sans-serif;background:var(--late-bg);color:var(--late);border-radius:6px;padding:8px 12px;margin-top:8px}
 #bn{font:13px system-ui,sans-serif;background:var(--late-bg);color:var(--late);border-radius:6px;padding:8px 12px;margin-top:8px}
 main{flex:1;display:flex;min-height:0;margin-top:8px;border-top:1px solid var(--line)}
-#w{flex:1;display:flex;flex-direction:column;min-width:0}
-textarea{flex:1;width:100%;border:0;outline:0;resize:none;background:var(--bg);color:var(--fg);font:19px/1.7 Georgia,serif;padding:28px max(8px,calc(50% - 360px))}
+#w{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+textarea{flex:1;min-height:0;width:100%;border:0;outline:0;resize:none;background:var(--bg);color:var(--fg);font:19px/1.7 Georgia,serif;padding:28px max(8px,calc(50% - 360px))}
 textarea:read-only{color:var(--mute)}
 #st{font:12px system-ui,sans-serif;color:var(--mute);padding:6px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 #msg{color:var(--acc)}
@@ -57,7 +57,8 @@ textarea:read-only{color:var(--mute)}
 #wc-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
 #wc-n{font-size:15px;margin-right:auto}
 #wc label{display:flex;align-items:center;gap:6px;color:var(--mute)}
-#wc input{width:76px;padding:4px 6px}
+#wc input{width:76px;padding:4px 6px;touch-action:manipulation;-webkit-user-select:text;user-select:text;-webkit-appearance:textfield;appearance:textfield}
+#wc input::-webkit-outer-spin-button,#wc input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 #wbar{position:relative;height:12px;background:var(--track);border-radius:6px;overflow:hidden}
 #wbi{display:block;height:100%;width:0;background:var(--acc);transition:width .15s,background-color .15s}
 #wmk{position:absolute;top:0;bottom:0;width:2px;background:var(--fg);opacity:.55;left:0}
@@ -102,6 +103,12 @@ body.kb #st{display:none}
 body.kb #prd{margin-top:2px;padding:4px 10px}
 body.kb #prt{max-height:22vh;font-size:15px;line-height:1.5}
 body.kb textarea{padding:8px 4px;line-height:1.5}
+/* Editing the minimum or maximum word count: keep those boxes on screen above the keyboard */
+body.kb.kbr #wc{padding:6px 0;gap:6px}
+body.kb.kbr #wc label{display:flex}
+body.kb.kbr #wc-s{display:block}
+body.kb.kbr #wbar{display:block}
+body.kb.kbr #prd{display:none}
 textarea{-webkit-appearance:none;appearance:none;border-radius:0}
 body:not(.run) #exp,body:not(.run) #hb,body:not(.run) #nw{display:none}
 #chk{font:13px/1.5 system-ui,sans-serif;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-top:8px;background:var(--panel)}
@@ -188,11 +195,9 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
     <h2 id="pw-t">⚠ Warning: read before you start</h2>
     <p>The timer starts the moment you press the button below. During the session:</p>
     <ul>
-      <li><b>Do not leave this page.</b> Do not switch to another app, tab or window.</li>
-      <li>The <b>first time</b> you leave, you get a warning. The <b>second time</b>, writing is blocked for the rest of the session.</li>
-      <li>Every time you leave is recorded and reported to the researcher.</li>
-      <li class="ok">Your screen going to sleep or your phone locking does <b>not</b> count as leaving.</li>
-      <li>Pasting is disabled.</li>
+      <li><b>Do not leave this page.</b> Do not switch to another app, tab or window or writing will be blocked</li>
+      <li>Avoid using another device as it will be detected and reported to the teacher.</li>
+      <li class="ok">Best of luck!</li>
     </ul>
     <div id="pw-row"><button class="p" id="pw-go">I understand, start writing</button><button id="pw-no">Go back</button></div>
   </div>
@@ -915,14 +920,20 @@ if(window.visualViewport){
   /* Some phones shrink the whole page when the keyboard opens, others only the visual viewport,
      so compare with the tallest height seen at this width instead of with window.innerHeight. */
   var baseH=0,baseW=0,wasKb=false;
+  function editingRange(){var a=document.activeElement;return !!(a&&(a.id==='wmin'||a.id==='wmax'))}
   var fit=function(){
     var h=vv.height,w=Math.round(vv.width);
     if(w!==baseW){baseW=w;baseH=0}
     if(h>baseH)baseH=h;
-    var kb=h<baseH-120||(h<=420&&document.activeElement===ta);
+    var er=editingRange();
+    var kb=h<baseH-120||(h<=420&&(document.activeElement===ta||er));
     document.body.classList.toggle('kb',kb);
+    /* While the word range boxes are being edited, keep them visible instead of hiding them */
+    document.body.classList.toggle('kbr',kb&&er);
     if(kb){
-      document.documentElement.style.setProperty('--app-h',h+'px');window.scrollTo(0,0);
+      document.documentElement.style.setProperty('--app-h',h+'px');
+      if(er){try{document.activeElement.scrollIntoView({block:'nearest'})}catch(e){}}
+      else window.scrollTo(0,0);
       if(!wasKb){var p=$('prd');if(p)p.open=false}
     }
     wasKb=kb;
@@ -931,7 +942,17 @@ if(window.visualViewport){
   ta.addEventListener('focus',function(){setTimeout(fit,350)});
   ta.addEventListener('blur',function(){setTimeout(fit,350)});
   window.addEventListener('orientationchange',function(){baseH=0;setTimeout(fit,400)});
+  ['wmin','wmax'].forEach(function(id){
+    var el=$(id);
+    el.addEventListener('focus',function(){fit();setTimeout(fit,350)});
+    el.addEventListener('blur',function(){setTimeout(fit,350)});
+  });
 }
+['wmin','wmax'].forEach(function(id){
+  var el=$(id);
+  el.addEventListener('focus',function(){setTimeout(function(){try{el.select()}catch(e){}},300)});
+  el.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();el.blur()}});
+});
 
 load();
 $('cfgwarn').hidden=!!cfg();
