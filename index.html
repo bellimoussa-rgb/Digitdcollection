@@ -934,10 +934,23 @@ $('about').addEventListener('click',function(e){if(e.target===$('about'))aboutOp
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('about').hidden)aboutOpen(false)});
 
 window.addEventListener('beforeunload',function(e){if(S.start!==null){snap(false)}save();if(S.start!==null&&!S.done){e.preventDefault();e.returnValue=''}});
+var voiceOk=false,chg=false;
+function primeVoice(){
+  if(voiceOk)return;
+  try{var ss=window.speechSynthesis;if(!ss)return;var u=new SpeechSynthesisUtterance(' ');u.volume=0;ss.speak(u);voiceOk=true}catch(e){}
+}
+['touchstart','click','keydown'].forEach(function(n){document.addEventListener(n,primeVoice,{passive:true,capture:true})});
+try{if(navigator.getBattery)navigator.getBattery().then(function(b){chg=b.charging;b.addEventListener('chargingchange',function(){chg=b.charging})}).catch(function(){})}catch(e){}
+function voiceWarn(blocked){
+  var t=blocked?'Warning. You left the session again. Writing is now blocked.':'Warning. You have left the writing session. Come back to this page now. If you leave again, writing will be blocked.';
+  try{if(navigator.vibrate)navigator.vibrate([400,150,400,150,400])}catch(e){}
+  try{beep()}catch(e){}
+  try{var ss=window.speechSynthesis;if(ss){ss.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=.95;u.volume=1;ss.speak(u)}}catch(e){}
+}
 function leaveNotice(){
   $('lk').hidden=!(S.start!==null&&S.blocked);
   if(S.start===null||!S.pending)return;
-  var b=S.pending===2;S.pending=0;save();
+  var b=S.pending===2;S.pending=0;save();voiceWarn(b);
   $('lv-t').textContent=b?'Writing is now blocked':'Warning: you left the session';
   $('lv-p').textContent=b?'You left this page a second time, so you can no longer write in this session. Your text so far is kept and you can still submit it.':'You left this page (another app, tab or window, split screen, a floating window or an extra screen). The timer kept running. If you leave again, you will not be able to write any more in this session.';
   $('lvm').hidden=false;$('lv-x').focus();
@@ -984,7 +997,7 @@ var blurAt=0,dhAt=0;
    Leaving for another app or tab loses focus noticeably earlier (switcher animation, gesture), or the
    student comes straight back. Tune these two numbers if a phone model behaves differently. */
 var DRAFT_GAP_MS=400,BLUR_MAX_MS=5000,LOCK_MIN_AWAY_MS=7000,TOUCH_BEFORE_HIDE_MS=2500;
-var lastTouch=0,lockAt=0;
+var lastTouch=0,lockAt=0,perfAt=0,SLEEP_AFTER_MS=15000;
 function isTouch(){try{return matchMedia('(pointer:coarse)').matches||matchMedia('(any-pointer:coarse)').matches||(navigator.maxTouchPoints||0)>0}catch(e){return false}}
 ['touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','pointercancel','mousedown','keydown','click'].forEach(function(n){window.addEventListener(n,function(){lastTouch=Date.now()},{capture:true,passive:true})});
 function addLeave(why){
@@ -1074,23 +1087,27 @@ document.addEventListener('visibilitychange',function(){
     if(S.start===null||S.done||S.blocked||S.locked||nowH<grace||mw){hideAt=0;dhAt=0;lockAt=0;save();return}
     var why=hideReason(nowH,gap);
     if(why){
-      addLeave(why);
+      addLeave(why);voiceWarn(S.blocked);
       if(S.drafting)draftLeft();
       ta.readOnly=true;dhAt=0;lockAt=0;save();return;
     }
     /* looks like a screen lock: allowed, but logged and verified when the page comes back */
-    hideAt=0;dhAt=nowH;lockAt=nowH;S.sleeps=(S.sleeps||0)+1;
+    hideAt=0;dhAt=nowH;lockAt=nowH;perfAt=performance.now();S.sleeps=(S.sleeps||0)+1;
     if(S.drafting)S.draftHides.push({t:nowH-S.start,away:0,gap:gap});
     save();
   }else{
     var away=lockAt?Date.now()-lockAt:0,h=S.draftHides.length?S.draftHides[S.draftHides.length-1]:null;
     if(S.drafting&&h&&dhAt)h.away=away;
     var wasLock=!!lockAt;
+    /* A real screen lock lets the phone sleep, so the monotonic clock (performance.now) falls behind the wall clock.
+       An app switch keeps the phone awake, so both clocks agree. Long absence + no sleep = left the app. */
+    var slept=wasLock?(away-(performance.now()-perfAt)):0;
+    var awakeAway=wasLock&&away>=SLEEP_AFTER_MS&&slept<1500&&!chg;
     dhAt=0;lockAt=0;
     if(S.drafting||wasLock){grace=Date.now()+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0}
     /* a lock followed by an unlock takes longer than a few seconds; a quick look at another app does not */
-    if(wasLock&&away<LOCK_MIN_AWAY_MS&&!S.blocked&&!S.done){
-      addLeave('page hid and came straight back (not a screen lock)');
+    if(wasLock&&(away<LOCK_MIN_AWAY_MS||awakeAway)&&!S.blocked&&!S.done){
+      addLeave(awakeAway?'page was hidden but the phone stayed awake (not a screen lock)':'page hid and came straight back (not a screen lock)');
       if(S.drafting)draftLeft();
       ta.readOnly=true;
     }
