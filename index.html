@@ -1016,7 +1016,7 @@ document.addEventListener('visibilitychange',function(){
       if(!S.blocked&&!S.done&&!mw&&Date.now()>=grace&&blurAt&&Date.now()-blurAt<2500){
         hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0});
         if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
-        draftLeft();ta.readOnly=true;
+        draftLeft();ta.readOnly=!!(S.blocked||S.locked);
       }else{hideAt=0;S.sleeps=(S.sleeps||0)+1}
       save();return;
     }
