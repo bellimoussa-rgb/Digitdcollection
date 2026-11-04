@@ -723,6 +723,11 @@ $('pw-go').onclick=function(){
   pwOpen(false);
   if(S.start!==null)return;
   var dm=durGet();if(!dm)return;
+  if(multiScreen()||sizeFlag()){
+    $('lv-t').textContent='Cannot start yet';
+    $('lv-p').textContent=multiScreen()?'More than one screen is connected. Disconnect the extra screen, then start again.':'This page is in split screen, a floating window or a resized window. Make it full screen, then start again.';
+    $('lvm').hidden=false;$('lv-x').focus();return;
+  }
   try{audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.resume)audio.resume()}catch(e){}
   S=Object.assign(fresh(),{fn:S.fn,ln:S.ln,limit:dm,wmin:S.wmin,wmax:S.wmax,prompt:cfgPrompt()});resetSubmit();
   S.start=Date.now();ta.value='';save();begin();ta.focus();
@@ -895,7 +900,7 @@ $('nw').onclick=function(){
   if(armed){
     clearTimeout(armed);armed=null;clearInterval(timer);
     var n={fn:S.fn,ln:S.ln,limit:limMin(S),wmin:S.wmin,wmax:S.wmax};S=Object.assign(fresh(),n);over=false;resetSubmit();
-    document.body.classList.remove('over','run','warn');warned1=false;mw=false;unf=0;szs=0;unlock();$('bn').hidden=true;$('clock').hidden=true;$('start').hidden=false;$('durl').hidden=false;durSet(limMin(S));
+    document.body.classList.remove('over','run','warn');warned1=false;mw=false;unf=0;szs=0;exs=0;unlock();$('bn').hidden=true;$('clock').hidden=true;$('start').hidden=false;$('durl').hidden=false;durSet(limMin(S));
     showPrompt();$('bi').style.width='0';ta.value='';ta.readOnly=true;$('ty').textContent='Typing time 00:00';
     b.textContent='New session';save();renderHist();stats();say('Ready for a new session.');
     return;
@@ -927,13 +932,13 @@ $('ab-x').onclick=function(){aboutOpen(false)};
 $('about').addEventListener('click',function(e){if(e.target===$('about'))aboutOpen(false)});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('about').hidden)aboutOpen(false)});
 
-window.addEventListener('beforeunload',function(){if(S.start!==null){snap(false)}save()});
+window.addEventListener('beforeunload',function(e){if(S.start!==null){snap(false)}save();if(S.start!==null&&!S.done){e.preventDefault();e.returnValue=''}});
 function leaveNotice(){
   $('lk').hidden=!(S.start!==null&&S.blocked);
   if(S.start===null||!S.pending)return;
   var b=S.pending===2;S.pending=0;save();
   $('lv-t').textContent=b?'Writing is now blocked':'Warning: you left the session';
-  $('lv-p').textContent=b?'You left this page a second time, so you can no longer write in this session. Your text so far is kept and you can still submit it.':'You switched away from this page. The timer kept running. If you leave again, you will not be able to write any more in this session.';
+  $('lv-p').textContent=b?'You left this page a second time, so you can no longer write in this session. Your text so far is kept and you can still submit it.':'You left this page (another app, tab or window, split screen, a floating window or an extra screen). The timer kept running. If you leave again, you will not be able to write any more in this session.';
   $('lvm').hidden=false;$('lv-x').focus();
 }
 $('lv-x').onclick=function(){$('lvm').hidden=true;if(!S.blocked&&!S.locked)ta.focus()};
@@ -976,6 +981,9 @@ var blurAt=0;
 window.addEventListener('blur',function(){blurAt=Date.now();setTimeout(mwCheck,1300)});
 window.addEventListener('focus',function(){blurAt=0;hadFocus=true;mwCheck()});
 window.addEventListener('resize',function(){setTimeout(mwCheck,1300)});
+window.addEventListener('orientationchange',function(){setTimeout(mwCheck,1500)});
+try{if(window.visualViewport)window.visualViewport.addEventListener('resize',function(){setTimeout(mwCheck,1300)})}catch(e){}
+if(!('onvisibilitychange' in document)&&'onwebkitvisibilitychange' in document){document.addEventListener('webkitvisibilitychange',function(){var ev=document.createEvent('Event');ev.initEvent('visibilitychange',true,true);document.dispatchEvent(ev)})}
 function sizeFlag(){
   try{
     if(!matchMedia('(pointer:coarse)').matches)return false;
@@ -990,22 +998,29 @@ function sizeFlag(){
   }catch(e){}
   return false;
 }
+/* Old Android/iOS browsers only expose the prefixed visibility API. */
+if(document.hidden===undefined&&document.webkitHidden!==undefined){try{Object.defineProperty(document,'hidden',{get:function(){return document.webkitHidden}})}catch(e){}}
+/* More than one screen connected (Chrome/Edge/Opera on PC). Other browsers do not expose this. */
+var exs=0;
+function multiScreen(){try{return !!(window.screen&&window.screen.isExtended)}catch(e){return false}}
+try{if(window.screen&&window.screen.addEventListener)window.screen.addEventListener('change',function(){setTimeout(mwCheck,300)})}catch(e){}
 function mwCheck(){
-  if(S.start===null||S.done||document.hidden||Date.now()<grace){unf=0;szs=0;return}
+  if(S.start===null||S.done||document.hidden||Date.now()<grace){unf=0;szs=0;exs=0;return}
   var now=Date.now(),f=document.hasFocus();
-  if(now-rafAt>800){unf=0;szs=0;return}
+  if(now-rafAt>800){unf=0;szs=0;exs=0;return}
   if(f){hadFocus=true;unf=0}else if(hadFocus){if(!unf)unf=now}
   if(sizeFlag()){if(!szs)szs=now}else szs=0;
-  var m=(unf&&now-unf>=1200)||(szs&&now-szs>=1200);
+  if(multiScreen()){if(!exs)exs=now}else exs=0;
+  var m=(unf&&now-unf>=1200)||(szs&&now-szs>=1200)||(exs&&now-exs>=1200);
   if(m&&!mw){
     mw=true;
     if(!S.blocked){
-      hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0,why:(szs&&now-szs>=1200)?'split, floating or resized screen':'window or app lost focus'});
+      hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0,why:(exs&&now-exs>=1200)?'multiple screens':(szs&&now-szs>=1200)?'split, floating or resized screen':'window or app lost focus'});
       if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
     }
     if(S.drafting)draftLeft();
     ta.readOnly=true;save();leaveNotice();
-  }else if(!m&&mw&&f&&!szs){
+  }else if(!m&&mw&&f&&!szs&&!exs){
     mw=false;
     if(hideAt&&S.leaveLog.length)S.leaveLog[S.leaveLog.length-1].away=now-hideAt;
     hideAt=0;ta.readOnly=!!(S.blocked||S.locked||S.drafting);save();
