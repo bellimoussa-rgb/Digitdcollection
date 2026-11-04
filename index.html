@@ -184,7 +184,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
 <div id="dm" role="dialog" aria-modal="true" aria-labelledby="dm-h" hidden>
   <div id="dm-card">
     <h2 id="dm-h">Drafting mode is on</h2>
-    <p>You can lock your screen or switch your phone off and the timer keeps counting. Switching to another app, tab or window still counts as leaving the session. Writing is paused until you resume.</p>
+    <p>You can lock your screen or switch your phone off and the timer keeps counting. Switching to another app, tab or window, floating windows, split screen and multiple screens still count as leaving the session (a warning first, then writing is blocked). Writing is paused until you resume.</p>
     <div id="dm-t" aria-live="off">00:00</div>
     <div id="dm-l">remaining</div>
     <button class="p" id="dm-x">Resume writing</button>
@@ -213,9 +213,9 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
     <h2 id="pw-t">⚠ Warning: read before you start</h2>
     <p>The timer starts the moment you press the button below. During the session:</p>
     <ul>
-      <li><b>Do not leave this page.</b> Do not switch to another app, tab or window or writing will be blocked</li>
+      <li><b>Do not leave this page.</b> Do not switch to another app, tab or window. Floating windows, split screen and multiple screens are not allowed. The first time you will get a warning and the second time writing will be blocked</li>
       <li>Avoid using another device as it will be detected and reported to the teacher.</li>
-      <li>Need a break to plan on paper? Press <b>Drafting mode</b>. You can then lock your screen or switch your phone off and the timer keeps running. Switching to another app still counts as leaving. Press <b>Resume writing</b> when you are back.</li>
+      <li>Need a break to plan on paper? Press <b>Drafting mode</b>. You can then lock your screen or switch your phone off and the timer keeps running. Switching apps, floating windows and split screen still count as leaving. Press <b>Resume writing</b> when you are back.</li>
       <li class="ok">Best of luck!</li>
     </ul>
     <div id="pw-row"><button class="p" id="pw-go">I understand, start writing</button><button id="pw-no">Go back</button></div>
@@ -469,7 +469,7 @@ function reportBlocks(S,A,now){
     ['Word range set by participant',S.wmin+' to '+S.wmax+' words'],
     ['Characters in the final notes',String(A.chars)],
     ['Characters in the final notes typed after '+LL,String(A.lateChars)],
-    ['Times the participant left the session',S.leaves?S.leaves+' ('+S.leaveLog.map(function(r){return 'at '+fmt(r.t)+', away '+fmt(r.away||0)}).join('; ')+')':'0'],
+    ['Times the participant left the session',S.leaves?S.leaves+' ('+S.leaveLog.map(function(r){return 'at '+fmt(r.t)+', away '+fmt(r.away||0)+(r.why?', '+r.why:'')}).join('; ')+')':'0'],
     ['Screen-off or idle page hides (not counted as leaving)',String(S.sleeps||0)],
     ['Drafting mode used (screen lock only; app switches still count as leaving)',S.draftLog&&S.draftLog.length?S.draftLog.length+' ('+S.draftLog.map(function(r){return 'at '+fmt(r.t)+', for '+fmt(r.away||0)}).join('; ')+')':'0'],
     ['Writing blocked after leaving twice',S.blocked?'Yes':'No'],
@@ -983,6 +983,8 @@ function sizeFlag(){
     if(!sw||!sh)return false;
     var lo=Math.min(sw,sh),hi=Math.max(sw,sh),land=iw>ih;
     if(iw<(land?hi:lo)*0.85)return true;
+    var ow=window.outerWidth,oh=window.outerHeight;
+    if(ow>0&&oh>0&&(ow<(land?hi:lo)*0.85||(!land&&oh<hi*0.55&&!(document.activeElement&&document.activeElement.tagName==='TEXTAREA'))))return true;
     var a=document.activeElement,typing=a&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT');
     if(!typing&&ih<(land?lo:hi)*0.55)return true;
   }catch(e){}
@@ -998,7 +1000,7 @@ function mwCheck(){
   if(m&&!mw){
     mw=true;
     if(!S.blocked){
-      hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0});
+      hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0,why:(szs&&now-szs>=1200)?'split, floating or resized screen':'window or app lost focus'});
       if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
     }
     if(S.drafting)draftLeft();
@@ -1014,7 +1016,7 @@ document.addEventListener('visibilitychange',function(){
     hadFocus=false;unf=0;szs=0;
     if(S.drafting){
       if(!S.blocked&&!S.done&&!mw&&Date.now()>=grace&&blurAt&&Date.now()-blurAt<2500){
-        hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0});
+        hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0,why:'switched app during drafting mode'});
         if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
         draftLeft();ta.readOnly=!!(S.blocked||S.locked);
       }else{hideAt=0;S.sleeps=(S.sleeps||0)+1}
