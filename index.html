@@ -979,6 +979,17 @@ var lastAct=Date.now(),rafAt=Date.now();
 ['touchstart','pointerdown','keydown','beforeinput','input','touchmove','wheel','scroll'].forEach(function(n){document.addEventListener(n,function(){lastAct=Date.now()},true)});
 (function rl(){rafAt=Date.now();requestAnimationFrame(rl)})();
 var blurAt=0,dhAt=0;
+/* Drafting mode: a screen lock hides the page at (almost) the same moment the window loses focus.
+   Leaving for another app or tab loses focus noticeably earlier (switcher animation, gesture), or the
+   student comes straight back. Tune these two numbers if a phone model behaves differently. */
+var DRAFT_GAP_MS=500,DRAFT_QUICK_BACK_MS=4000;
+function addLeave(why){
+  var now=Date.now();
+  if(!S.blocked){
+    hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0,why:why});
+    if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
+  }
+}
 window.addEventListener('blur',function(){blurAt=Date.now();setTimeout(mwCheck,1300);setTimeout(mwCheck,2700)});
 window.addEventListener('focus',function(){blurAt=0;hadFocus=true;mwCheck()});
 window.addEventListener('resize',function(){setTimeout(mwCheck,1300)});
@@ -1023,7 +1034,7 @@ function mwCheck(){
   if(f){hadFocus=true;unf=0}else if(hadFocus){if(!unf)unf=now}
   if(sizeFlag()){if(!szs)szs=now}else szs=0;
   if(multiScreen()){if(!exs)exs=now}else exs=0;
-  var ut=S.drafting?2500:1200;
+  var ut=S.drafting?1500:1200;
   var m=(unf&&now-unf>=ut)||(szs&&now-szs>=1200)||(exs&&now-exs>=1200);
   if(m&&!mw){
     mw=true;
@@ -1047,8 +1058,14 @@ document.addEventListener('visibilitychange',function(){
          fire blur first on lock too), so in drafting mode a hidden page is never counted as leaving.
          It is logged with its duration so the teacher can see it. Leaving while the page stays on
          screen (floating window, split screen, notification shade, extra screen) is still caught. */
-      hideAt=0;dhAt=Date.now();S.sleeps=(S.sleeps||0)+1;
-      S.draftHides.push({t:dhAt-S.start,away:0});
+      var nowH=Date.now(),gap=blurAt?nowH-blurAt:-1;
+      if(!S.done&&nowH>=grace&&gap>=DRAFT_GAP_MS&&gap<3000){
+        addLeave('switched to another app or tab');
+        draftLeft();ta.readOnly=!!(S.blocked||S.locked);dhAt=0;
+        save();return;
+      }
+      hideAt=0;dhAt=nowH;S.sleeps=(S.sleeps||0)+1;
+      S.draftHides.push({t:dhAt-S.start,away:0,gap:gap});
       save();return;
     }
     if(S.start!==null&&!S.blocked&&!S.done&&!mw&&Date.now()>=grace){
@@ -1062,8 +1079,14 @@ document.addEventListener('visibilitychange',function(){
     if(S.drafting){
       /* back from lock: give the window time to regain focus and the size to settle */
       var h=S.draftHides.length?S.draftHides[S.draftHides.length-1]:null;
-      if(h&&dhAt)h.away=Date.now()-dhAt;
+      var away=dhAt?Date.now()-dhAt:0;
+      if(h&&dhAt)h.away=away;
       dhAt=0;grace=Date.now()+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0;
+      /* a lock and unlock takes longer than a few seconds; a quick glance at another app does not */
+      if(h&&away>0&&away<DRAFT_QUICK_BACK_MS&&!S.blocked){
+        addLeave('left the page and came straight back');
+        draftLeft();ta.readOnly=!!(S.blocked||S.locked);
+      }
     }
     lock();
     if(hideAt&&S.leaveLog.length){S.leaveLog[S.leaveLog.length-1].away=Date.now()-hideAt}
