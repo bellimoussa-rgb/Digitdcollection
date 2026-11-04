@@ -959,6 +959,7 @@ $('lv-x').onclick=function(){$('lvm').hidden=true;if(!S.blocked&&!S.locked)ta.fo
 /* ---- Drafting mode: pause leave detection so the screen can be locked. The timer keeps running. ---- */
 function draftStart(){
   if(S.start===null||S.done||S.drafting)return;
+  if(!isTouch()){say('Drafting mode is only available on phones and tablets.');return}
   if(S.blocked||S.locked){say('Writing is blocked, so drafting mode is not available.');return}
   snap(false);
   lastTouch=0;/* the tap on the Drafting button must not count as a touch before a lock */
@@ -997,7 +998,7 @@ var blurAt=0,dhAt=0;
    Leaving for another app or tab loses focus noticeably earlier (switcher animation, gesture), or the
    student comes straight back. Tune these two numbers if a phone model behaves differently. */
 var DRAFT_GAP_MS=400,BLUR_MAX_MS=5000,LOCK_MIN_AWAY_MS=7000,TOUCH_BEFORE_HIDE_MS=2500;
-var lastTouch=0,lockAt=0,perfAt=0,SLEEP_AFTER_MS=15000;
+var lastTouch=0,lockAt=0,perfAt=0,SLEEP_PROOF_MS=800;
 function isTouch(){try{return matchMedia('(pointer:coarse)').matches||matchMedia('(any-pointer:coarse)').matches||(navigator.maxTouchPoints||0)>0}catch(e){return false}}
 ['touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','pointercancel','mousedown','keydown','click'].forEach(function(n){window.addEventListener(n,function(){lastTouch=Date.now()},{capture:true,passive:true})});
 function addLeave(why){
@@ -1102,12 +1103,12 @@ document.addEventListener('visibilitychange',function(){
     /* A real screen lock lets the phone sleep, so the monotonic clock (performance.now) falls behind the wall clock.
        An app switch keeps the phone awake, so both clocks agree. Long absence + no sleep = left the app. */
     var slept=wasLock?(away-(performance.now()-perfAt)):0;
-    var awakeAway=wasLock&&away>=SLEEP_AFTER_MS&&slept<1500&&!chg;
+    var awakeAway=wasLock&&slept<SLEEP_PROOF_MS;/* no proof the phone really slept = it was an app switch */
     dhAt=0;lockAt=0;
     if(S.drafting||wasLock){grace=Date.now()+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0}
     /* a lock followed by an unlock takes longer than a few seconds; a quick look at another app does not */
     if(wasLock&&(away<LOCK_MIN_AWAY_MS||awakeAway)&&!S.blocked&&!S.done){
-      addLeave(awakeAway?'page was hidden but the phone stayed awake (not a screen lock)':'page hid and came straight back (not a screen lock)');
+      addLeave(awakeAway?'page was hidden but there is no proof of a screen lock (phone did not sleep)':'page hid and came straight back (not a screen lock)');
       if(S.drafting)draftLeft();
       ta.readOnly=true;
     }
