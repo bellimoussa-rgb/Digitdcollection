@@ -184,7 +184,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
 <div id="dm" role="dialog" aria-modal="true" aria-labelledby="dm-h" hidden>
   <div id="dm-card">
     <h2 id="dm-h">Drafting mode is on</h2>
-    <p>You can lock your screen or switch your phone off and the timer keeps counting. Switching to another app, tab or window, floating windows, split screen and multiple screens still count as leaving the session (a warning first, then writing is blocked). Writing is paused until you resume.</p>
+    <p>You may only lock your screen (power button). The timer keeps counting. Leaving this page in ANY way (home button or gesture, another app, tab or window, notifications that open an app, floating windows, split screen, extra screens) counts as leaving the session: a warning first, then writing is blocked. Unlock your phone and come back to this page, then press Resume writing.</p>
     <div id="dm-t" aria-live="off">00:00</div>
     <div id="dm-l">remaining</div>
     <button class="p" id="dm-x">Resume writing</button>
@@ -948,6 +948,7 @@ function draftStart(){
   if(S.start===null||S.done||S.drafting)return;
   if(S.blocked||S.locked){say('Writing is blocked, so drafting mode is not available.');return}
   snap(false);
+  lastTouch=0;/* the tap on the Drafting button must not count as a touch before a lock */
   S.drafting=true;S.draftLog.push({t:Date.now()-S.start,away:0});
   mw=false;unf=0;szs=0;hideAt=0;
   ta.readOnly=true;try{ta.blur()}catch(e){}
@@ -982,7 +983,10 @@ var blurAt=0,dhAt=0;
 /* Drafting mode: a screen lock hides the page at (almost) the same moment the window loses focus.
    Leaving for another app or tab loses focus noticeably earlier (switcher animation, gesture), or the
    student comes straight back. Tune these two numbers if a phone model behaves differently. */
-var DRAFT_GAP_MS=500,DRAFT_QUICK_BACK_MS=4000;
+var DRAFT_GAP_MS=400,BLUR_MAX_MS=5000,LOCK_MIN_AWAY_MS=7000,TOUCH_BEFORE_HIDE_MS=2500;
+var lastTouch=0,lockAt=0;
+function isTouch(){try{return matchMedia('(pointer:coarse)').matches||matchMedia('(any-pointer:coarse)').matches||(navigator.maxTouchPoints||0)>0}catch(e){return false}}
+['touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','pointercancel','mousedown','keydown','click'].forEach(function(n){window.addEventListener(n,function(){lastTouch=Date.now()},{capture:true,passive:true})});
 function addLeave(why){
   var now=Date.now();
   if(!S.blocked){
@@ -1050,47 +1054,51 @@ function mwCheck(){
     hideAt=0;ta.readOnly=!!(S.blocked||S.locked||S.drafting);save();
   }
 }
+/* Hide classifier (same rule in normal and drafting mode). A page that becomes hidden is either a screen
+   lock / screen off (allowed) or the student leaving (app, tab, home screen, recents). A web page cannot
+   tell these apart with certainty, so a hidden page counts as LEAVING unless it looks like a lock:
+   - non-touch devices (PC, laptop): any hidden page is leaving
+   - a finger or key touched the page just before it hid (home / recents gesture, tab switcher): leaving
+   - the window lost focus noticeably before it hid (app switcher animation): leaving
+   - the page comes back too soon for a lock and unlock to have happened: leaving (checked on return) */
+function hideReason(nowH,gap){
+  if(!isTouch())return 'page hidden on a computer (another tab, window or minimised)';
+  if(nowH-lastTouch<TOUCH_BEFORE_HIDE_MS)return 'switched app or went home (gesture or button right before the page hid)';
+  if(gap>=DRAFT_GAP_MS&&gap<BLUR_MAX_MS)return 'switched to another app or tab';
+  return '';
+}
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){
     hadFocus=false;unf=0;szs=0;
-    if(S.drafting){
-      /* Lock, screen-off and app switch all hide the page and look the same to a web page (most phones
-         fire blur first on lock too), so in drafting mode a hidden page is never counted as leaving.
-         It is logged with its duration so the teacher can see it. Leaving while the page stays on
-         screen (floating window, split screen, notification shade, extra screen) is still caught. */
-      var nowH=Date.now(),gap=blurAt?nowH-blurAt:-1;
-      if(!S.done&&nowH>=grace&&gap>=DRAFT_GAP_MS&&gap<3000){
-        addLeave('switched to another app or tab');
-        draftLeft();ta.readOnly=!!(S.blocked||S.locked);dhAt=0;
-        save();return;
-      }
-      hideAt=0;dhAt=nowH;S.sleeps=(S.sleeps||0)+1;
-      S.draftHides.push({t:dhAt-S.start,away:0,gap:gap});
-      save();return;
+    var nowH=Date.now(),gap=blurAt?nowH-blurAt:-1;
+    if(S.start===null||S.done||S.blocked||S.locked||nowH<grace||mw){hideAt=0;dhAt=0;lockAt=0;save();return}
+    var why=hideReason(nowH,gap);
+    if(why){
+      addLeave(why);
+      if(S.drafting)draftLeft();
+      ta.readOnly=true;dhAt=0;lockAt=0;save();return;
     }
-    if(S.start!==null&&!S.blocked&&!S.done&&!mw&&Date.now()>=grace){
-      if(blurAt&&Date.now()-blurAt<2500&&Date.now()-lastAct<8000){
-        hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0});
-        if(S.leaves>=2){S.blocked=true;S.pending=2;ta.readOnly=true}else S.pending=1;
-      }else{hideAt=0;S.sleeps=(S.sleeps||0)+1}
-    }else hideAt=0;
+    /* looks like a screen lock: allowed, but logged and verified when the page comes back */
+    hideAt=0;dhAt=nowH;lockAt=nowH;S.sleeps=(S.sleeps||0)+1;
+    if(S.drafting)S.draftHides.push({t:nowH-S.start,away:0,gap:gap});
     save();
   }else{
-    if(S.drafting){
-      /* back from lock: give the window time to regain focus and the size to settle */
-      var h=S.draftHides.length?S.draftHides[S.draftHides.length-1]:null;
-      var away=dhAt?Date.now()-dhAt:0;
-      if(h&&dhAt)h.away=away;
-      dhAt=0;grace=Date.now()+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0;
-      /* a lock and unlock takes longer than a few seconds; a quick glance at another app does not */
-      if(h&&away>0&&away<DRAFT_QUICK_BACK_MS&&!S.blocked){
-        addLeave('left the page and came straight back');
-        draftLeft();ta.readOnly=!!(S.blocked||S.locked);
-      }
+    var away=lockAt?Date.now()-lockAt:0,h=S.draftHides.length?S.draftHides[S.draftHides.length-1]:null;
+    if(S.drafting&&h&&dhAt)h.away=away;
+    var wasLock=!!lockAt;
+    dhAt=0;lockAt=0;
+    if(S.drafting||wasLock){grace=Date.now()+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0}
+    /* a lock followed by an unlock takes longer than a few seconds; a quick look at another app does not */
+    if(wasLock&&away<LOCK_MIN_AWAY_MS&&!S.blocked&&!S.done){
+      addLeave('page hid and came straight back (not a screen lock)');
+      if(S.drafting)draftLeft();
+      ta.readOnly=true;
     }
     lock();
     if(hideAt&&S.leaveLog.length){S.leaveLog[S.leaveLog.length-1].away=Date.now()-hideAt}
-    hideAt=0;leaveNotice();save();
+    hideAt=0;leaveNotice();
+    ta.readOnly=!!(S.blocked||S.locked||S.drafting||mw);
+    save();
   }
 });
 window.addEventListener('pagehide',save);
