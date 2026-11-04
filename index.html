@@ -472,6 +472,7 @@ function reportBlocks(S,A,now){
     ['Times the participant left the session',S.leaves?S.leaves+' ('+S.leaveLog.map(function(r){return 'at '+fmt(r.t)+', away '+fmt(r.away||0)+(r.why?', '+r.why:'')}).join('; ')+')':'0'],
     ['Screen-off or idle page hides (not counted as leaving)',String(S.sleeps||0)],
     ['Drafting mode used (screen lock only; app switches still count as leaving)',S.draftLog&&S.draftLog.length?S.draftLog.length+' ('+S.draftLog.map(function(r){return 'at '+fmt(r.t)+', for '+fmt(r.away||0)}).join('; ')+')':'0'],
+    ['Screen locked or page hidden during drafting mode',S.draftHides&&S.draftHides.length?S.draftHides.length+' ('+S.draftHides.map(function(r){return 'at '+fmt(r.t)+', for '+fmt(r.away||0)}).join('; ')+')':'0'],
     ['Writing blocked after leaving twice',S.blocked?'Yes':'No'],
     ['History snapshots saved',String(S.hist.length)],
     ['Restores from history',S.restores.length?S.restores.length+' (at '+S.restores.map(function(r){return fmt(r.t)}).join(', ')+')':'0']
@@ -554,7 +555,7 @@ async function aesZip(files,password){
 var $=function(i){return document.getElementById(i)};
 var PASSCODE='research001',KEY='dct_v1';
 var ta=$('ta'),S=fresh(),over=false,timer=null,tickN=0,dirty=false,armed=null,msgT=null,audio=null,warned=false,grace=0,hideAt=0,warned1=false,mw=false,hadFocus=document.hasFocus(),unf=0,szs=0,vid=null,vf=false;
-function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',exported:null,limit:25,wmin:150,wmax:300,leaves:0,leaveLog:[],blocked:false,pending:0,done:false,prompt:'',sleeps:0,locked:false,drafting:false,draftLog:[]}}
+function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',exported:null,limit:25,wmin:150,wmax:300,leaves:0,leaveLog:[],blocked:false,pending:0,done:false,prompt:'',sleeps:0,locked:false,drafting:false,draftLog:[],draftHides:[]}}
 var EXTRA=5*60000;
 function lockTime(quiet){
   S.locked=true;ta.readOnly=true;save();overUi(Date.now()-S.start,limMs(S));
@@ -821,7 +822,7 @@ async function submitRemote(c,base,notes,rep,A,now){
     metrics:{words:A.words,characters:A.chars,sentences:A.sn.a+A.sn.b,clauses_estimated:A.cl.a+A.cl.b,
       typing_seconds_within:Math.round(A.actIn/1000),typing_seconds_after:Math.round(A.actLate/1000),
       typed_within:A.insIn,typed_after:A.insLate,deleted_within:A.delIn,deleted_after:A.delLate,
-      word_min:S.wmin,word_max:S.wmax,left_session:S.leaves,writing_blocked:!!S.blocked,pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars,drafting_sessions:(S.draftLog||[]).length,drafting_seconds:Math.round((S.draftLog||[]).reduce(function(a,r){return a+(r.away||0)},0)/1000)},
+      word_min:S.wmin,word_max:S.wmax,left_session:S.leaves,writing_blocked:!!S.blocked,pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars,drafting_sessions:(S.draftLog||[]).length,drafting_screen_off:(S.draftHides||[]).length,drafting_seconds:Math.round((S.draftLog||[]).reduce(function(a,r){return a+(r.away||0)},0)/1000)},
     notes_path:np,report_path:rp,user_agent:(navigator.userAgent||'').slice(0,200)
   };
   try{await sbFetch(root+'/rest/v1/sessions',{method:'POST',headers:sbHead(c,{'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)})}catch(e){e.where='saving the text and measures';throw e}
@@ -977,8 +978,8 @@ $('dm-x').onclick=draftEnd;
 var lastAct=Date.now(),rafAt=Date.now();
 ['touchstart','pointerdown','keydown','beforeinput','input','touchmove','wheel','scroll'].forEach(function(n){document.addEventListener(n,function(){lastAct=Date.now()},true)});
 (function rl(){rafAt=Date.now();requestAnimationFrame(rl)})();
-var blurAt=0;
-window.addEventListener('blur',function(){blurAt=Date.now();setTimeout(mwCheck,1300)});
+var blurAt=0,dhAt=0;
+window.addEventListener('blur',function(){blurAt=Date.now();setTimeout(mwCheck,1300);setTimeout(mwCheck,2700)});
 window.addEventListener('focus',function(){blurAt=0;hadFocus=true;mwCheck()});
 window.addEventListener('resize',function(){setTimeout(mwCheck,1300)});
 window.addEventListener('orientationchange',function(){setTimeout(mwCheck,1500)});
@@ -1004,14 +1005,26 @@ if(document.hidden===undefined&&document.webkitHidden!==undefined){try{Object.de
 var exs=0;
 function multiScreen(){try{return !!(window.screen&&window.screen.isExtended)}catch(e){return false}}
 try{if(window.screen&&window.screen.addEventListener)window.screen.addEventListener('change',function(){setTimeout(mwCheck,300)})}catch(e){}
+/* Some phones freeze the page when the screen locks without firing visibilitychange (old Android
+   browsers, some WebViews). A gap between two checks means the page was frozen: forget any
+   focus loss seen before the freeze and give the window time to settle after it wakes. */
+var lastMw=0;
+function frozenGap(){
+  var n=Date.now();
+  if(lastMw&&n-lastMw>1500&&S.drafting){unf=0;szs=0;exs=0;hadFocus=false;blurAt=0;grace=n+3000}
+  lastMw=n;
+}
+try{document.addEventListener('freeze',function(){if(S.drafting)lastMw=0});document.addEventListener('resume',function(){if(S.drafting){unf=0;szs=0;exs=0;hadFocus=false;blurAt=0;grace=Date.now()+3000}})}catch(e){}
 function mwCheck(){
+  frozenGap();
   if(S.start===null||S.done||document.hidden||Date.now()<grace){unf=0;szs=0;exs=0;return}
   var now=Date.now(),f=document.hasFocus();
   if(now-rafAt>800){unf=0;szs=0;exs=0;return}
   if(f){hadFocus=true;unf=0}else if(hadFocus){if(!unf)unf=now}
   if(sizeFlag()){if(!szs)szs=now}else szs=0;
   if(multiScreen()){if(!exs)exs=now}else exs=0;
-  var m=(unf&&now-unf>=1200)||(szs&&now-szs>=1200)||(exs&&now-exs>=1200);
+  var ut=S.drafting?2500:1200;
+  var m=(unf&&now-unf>=ut)||(szs&&now-szs>=1200)||(exs&&now-exs>=1200);
   if(m&&!mw){
     mw=true;
     if(!S.blocked){
@@ -1030,11 +1043,12 @@ document.addEventListener('visibilitychange',function(){
   if(document.hidden){
     hadFocus=false;unf=0;szs=0;
     if(S.drafting){
-      if(!S.blocked&&!S.done&&!mw&&Date.now()>=grace&&blurAt&&Date.now()-blurAt<2500){
-        hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0,why:'switched app during drafting mode'});
-        if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
-        draftLeft();ta.readOnly=!!(S.blocked||S.locked);
-      }else{hideAt=0;S.sleeps=(S.sleeps||0)+1}
+      /* Lock, screen-off and app switch all hide the page and look the same to a web page (most phones
+         fire blur first on lock too), so in drafting mode a hidden page is never counted as leaving.
+         It is logged with its duration so the teacher can see it. Leaving while the page stays on
+         screen (floating window, split screen, notification shade, extra screen) is still caught. */
+      hideAt=0;dhAt=Date.now();S.sleeps=(S.sleeps||0)+1;
+      S.draftHides.push({t:dhAt-S.start,away:0});
       save();return;
     }
     if(S.start!==null&&!S.blocked&&!S.done&&!mw&&Date.now()>=grace){
@@ -1045,12 +1059,19 @@ document.addEventListener('visibilitychange',function(){
     }else hideAt=0;
     save();
   }else{
+    if(S.drafting){
+      /* back from lock: give the window time to regain focus and the size to settle */
+      var h=S.draftHides.length?S.draftHides[S.draftHides.length-1]:null;
+      if(h&&dhAt)h.away=Date.now()-dhAt;
+      dhAt=0;grace=Date.now()+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0;
+    }
     lock();
     if(hideAt&&S.leaveLog.length){S.leaveLog[S.leaveLog.length-1].away=Date.now()-hideAt}
     hideAt=0;leaveNotice();save();
   }
 });
 window.addEventListener('pagehide',save);
+window.addEventListener('pageshow',function(){if(S.start!==null&&!S.done){if(S.drafting){grace=Date.now()+3000;hadFocus=false;unf=0;szs=0;exs=0}lock()}});
 
 /* ---- Phones: keep the screen awake and keep the page above the on-screen keyboard ---- */
 var wl=null;
