@@ -146,7 +146,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
   <label id="durl" for="dur">Session length <select id="dur"><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="25" selected>25 minutes</option><option value="custom">Custom…</option></select><input id="dcus" type="number" min="1" max="180" step="1" inputmode="numeric" placeholder="Minutes" aria-label="Custom session length in minutes" hidden></label>
   <button class="p" id="start">Start session</button>
   <div id="clock" hidden><span id="tm">00:00</span><span id="tl">remaining</span></div>
-  <button id="dr" type="button" title="Pause leave detection so you can lock your screen. The timer keeps running.">Drafting mode</button>
+  <button id="dr" type="button" title="Lock your screen without it counting as leaving. Switching apps still counts. The timer keeps running.">Drafting mode</button>
   <button id="th" type="button">Dark mode</button>
   <button id="hb">History</button>
   <button class="p" id="sub">Submit</button>
@@ -184,7 +184,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
 <div id="dm" role="dialog" aria-modal="true" aria-labelledby="dm-h" hidden>
   <div id="dm-card">
     <h2 id="dm-h">Drafting mode is on</h2>
-    <p>You can lock your screen or switch your phone off. The timer keeps counting and this is not recorded as leaving the session. Writing is paused until you resume.</p>
+    <p>You can lock your screen or switch your phone off and the timer keeps counting. Switching to another app, tab or window still counts as leaving the session. Writing is paused until you resume.</p>
     <div id="dm-t" aria-live="off">00:00</div>
     <div id="dm-l">remaining</div>
     <button class="p" id="dm-x">Resume writing</button>
@@ -215,7 +215,7 @@ aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 
     <ul>
       <li><b>Do not leave this page.</b> Do not switch to another app, tab or window or writing will be blocked</li>
       <li>Avoid using another device as it will be detected and reported to the teacher.</li>
-      <li>Need a break to plan on paper? Press <b>Drafting mode</b>. You can then lock your screen or switch your phone off. The timer keeps running. Press <b>Resume writing</b> when you are back.</li>
+      <li>Need a break to plan on paper? Press <b>Drafting mode</b>. You can then lock your screen or switch your phone off and the timer keeps running. Switching to another app still counts as leaving. Press <b>Resume writing</b> when you are back.</li>
       <li class="ok">Best of luck!</li>
     </ul>
     <div id="pw-row"><button class="p" id="pw-go">I understand, start writing</button><button id="pw-no">Go back</button></div>
@@ -471,7 +471,7 @@ function reportBlocks(S,A,now){
     ['Characters in the final notes typed after '+LL,String(A.lateChars)],
     ['Times the participant left the session',S.leaves?S.leaves+' ('+S.leaveLog.map(function(r){return 'at '+fmt(r.t)+', away '+fmt(r.away||0)}).join('; ')+')':'0'],
     ['Screen-off or idle page hides (not counted as leaving)',String(S.sleeps||0)],
-    ['Drafting mode used (not counted as leaving)',S.draftLog&&S.draftLog.length?S.draftLog.length+' ('+S.draftLog.map(function(r){return 'at '+fmt(r.t)+', for '+fmt(r.away||0)}).join('; ')+')':'0'],
+    ['Drafting mode used (screen lock only; app switches still count as leaving)',S.draftLog&&S.draftLog.length?S.draftLog.length+' ('+S.draftLog.map(function(r){return 'at '+fmt(r.t)+', for '+fmt(r.away||0)}).join('; ')+')':'0'],
     ['Writing blocked after leaving twice',S.blocked?'Yes':'No'],
     ['History snapshots saved',String(S.hist.length)],
     ['Restores from history',S.restores.length?S.restores.length+' (at '+S.restores.map(function(r){return fmt(r.t)}).join(', ')+')':'0']
@@ -960,6 +960,11 @@ function draftEnd(){
   save();lock();
   if(!ta.readOnly){try{ta.focus()}catch(e){}}
 }
+function draftLeft(){
+  var r=S.draftLog.length?S.draftLog[S.draftLog.length-1]:null;
+  if(r)r.away=Date.now()-S.start-r.t;
+  S.drafting=false;document.body.classList.remove('drafting');$('dm').hidden=true;
+}
 $('dr').onclick=function(){if(S.drafting)draftEnd();else draftStart()};
 $('dm-x').onclick=draftEnd;
 /* Screen sleep and phone lock hide the page without the window first losing focus.
@@ -984,7 +989,7 @@ function sizeFlag(){
   return false;
 }
 function mwCheck(){
-  if(S.start===null||S.done||S.drafting||document.hidden||Date.now()<grace){unf=0;szs=0;return}
+  if(S.start===null||S.done||document.hidden||Date.now()<grace){unf=0;szs=0;return}
   var now=Date.now(),f=document.hasFocus();
   if(now-rafAt>800){unf=0;szs=0;return}
   if(f){hadFocus=true;unf=0}else if(hadFocus){if(!unf)unf=now}
@@ -996,17 +1001,25 @@ function mwCheck(){
       hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0});
       if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
     }
+    if(S.drafting)draftLeft();
     ta.readOnly=true;save();leaveNotice();
   }else if(!m&&mw&&f&&!szs){
     mw=false;
     if(hideAt&&S.leaveLog.length)S.leaveLog[S.leaveLog.length-1].away=now-hideAt;
-    hideAt=0;ta.readOnly=!!(S.blocked||S.locked);save();
+    hideAt=0;ta.readOnly=!!(S.blocked||S.locked||S.drafting);save();
   }
 }
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){
     hadFocus=false;unf=0;szs=0;
-    if(S.drafting){hideAt=0;S.sleeps=(S.sleeps||0)+1;save();return}
+    if(S.drafting){
+      if(!S.blocked&&!S.done&&!mw&&Date.now()>=grace&&blurAt&&Date.now()-blurAt<2500){
+        hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0});
+        if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
+        draftLeft();ta.readOnly=true;
+      }else{hideAt=0;S.sleeps=(S.sleeps||0)+1}
+      save();return;
+    }
     if(S.start!==null&&!S.blocked&&!S.done&&!mw&&Date.now()>=grace){
       if(blurAt&&Date.now()-blurAt<2500&&Date.now()-lastAct<8000){
         hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0});
