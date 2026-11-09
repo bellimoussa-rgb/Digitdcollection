@@ -933,7 +933,7 @@ var blurAt=0,dhAt=0,mobileHideAt=0,mobileHiddenWithoutBlur=false;
 /* A screen lock hides the page at (almost) the same moment the window loses focus.
    Leaving for another app or tab loses focus noticeably earlier (switcher animation, gesture), or the
    student comes straight back. Tune these two numbers if a phone model behaves differently. */
-var DRAFT_GAP_MS=180,DRAFT_QUICK_BACK_MS=2500;
+var DRAFT_GAP_MS=180,DRAFT_QUICK_BACK_MS=2500,PHONE_IDLE_SLEEP_MS=45000,countedHide=false;
 /* Phones and tablets (including iPadOS, which reports itself as a Mac). */
 function isMobile(){
   try{
@@ -1037,9 +1037,18 @@ document.addEventListener('visibilitychange',function(){
     /* A phone display timeout or screen lock hides the page alongside focus loss. A deliberate app/tab
        switch loses focus first, so only a measurable gap is treated as leaving. */
     var phone=isMobile();
+    countedHide=false;
+    var idle=nowH-lastAct;
     if(!S.blocked&&!mw&&nowH>=grace&&gap>=DRAFT_GAP_MS&&gap<3000){
-      addLeave('switched to another app or tab');
+      addLeave('switched to another app or tab');countedHide=true;
       ta.readOnly=!!(S.blocked||S.locked);dhAt=0;
+    }else if(phone&&!S.blocked&&!mw&&nowH>=grace&&idle<PHONE_IDLE_SLEEP_MS){
+      /* On phones the home screen, another app and a screen lock all hide the page at the same instant, so a
+         hide while the student was active counts as leaving. A hide after a long idle period is treated as
+         the phone going to sleep by itself and is not counted. */
+      addLeave('left the app or went to the home screen');countedHide=true;
+      ta.readOnly=!!(S.blocked||S.locked);dhAt=nowH;
+      S.hides=S.hides||[];S.hides.push({t:nowH-S.start,away:0,gap:gap,maybe:false});
     }else{
       hideAt=0;dhAt=nowH;S.sleeps=(S.sleeps||0)+1;
       S.hides=S.hides||[];
@@ -1053,10 +1062,10 @@ document.addEventListener('visibilitychange',function(){
     dhAt=0;grace=nowV+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0;
     /* On iOS, app/tab switching can hide the page before it emits blur. Count only a short
        round trip in that case so ordinary screen sleep/locking remains exempt. */
-    var iosFallback=isMobile()&&mobileHiddenWithoutBlur&&mobileHideAt&&away>=250&&away<8000;
+    var iosFallback=!countedHide&&isMobile()&&mobileHiddenWithoutBlur&&mobileHideAt&&away>=250&&away<8000;
     mobileHideAt=0;mobileHiddenWithoutBlur=false;
     /* Unlocking normally takes longer than a couple of seconds; a quick app/tab round trip does not. */
-    if((!isMobile()||iosFallback)&&S.start!==null&&!S.done&&!S.blocked&&away>0&&(isMobile()?away<8000:away<DRAFT_QUICK_BACK_MS)){
+    if(!countedHide&&(!isMobile()||iosFallback)&&S.start!==null&&!S.done&&!S.blocked&&away>0&&(isMobile()?away<8000:away<DRAFT_QUICK_BACK_MS)){
       addLeave('left the page and came straight back');
       ta.readOnly=!!(S.blocked||S.locked);
     }
