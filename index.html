@@ -13,7 +13,7 @@
 <title>WriteIt</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Layout: one full-height writing surface under a thin timer bar. */
+/* Layout: one full-height writing surface under a thin timer bar; history opens as a side panel. */
 :root{--bg:#faf7f2;--panel:#f1ece3;--fg:#2a2622;--mute:#7a7167;--line:#ddd5c8;--acc:#8a4b2a;--acc-fg:#ffffff;--late:#b3261e;--late-bg:#fbe9e7;--track:#e6dfd3;--ok:#2e7d32;--warn:#b26a00}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1b19;--panel:#262320;--fg:#ece6dc;--mute:#9a9186;--line:#3a352f;--acc:#d9915f;--acc-fg:#1d1b19;--late:#ff8f85;--late-bg:#3a2321;--track:#322e29;--ok:#6fcf97;--warn:#f0b24a;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#1d1b19;--panel:#262320;--fg:#ece6dc;--mute:#9a9186;--line:#3a352f;--acc:#d9915f;--acc-fg:#1d1b19;--late:#ff8f85;--late-bg:#3a2321;--track:#322e29;--ok:#6fcf97;--warn:#f0b24a;color-scheme:dark}
@@ -47,7 +47,6 @@ body.over #bar i{background:var(--late)}
 #cf-sum{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 #cf-sum .warn{color:var(--late)}
 #lk{font:13px system-ui,sans-serif;background:var(--late-bg);color:var(--late);border-radius:6px;padding:8px 12px;margin-top:8px}
-#sp{font:13px system-ui,sans-serif;background:var(--late-bg);color:var(--late);border-radius:6px;padding:8px 12px;margin-top:8px}
 #bn{font:13px system-ui,sans-serif;background:var(--late-bg);color:var(--late);border-radius:6px;padding:8px 12px;margin-top:8px}
 main{flex:1;display:flex;min-height:0;margin-top:8px;border-top:1px solid var(--line)}
 #w{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
@@ -72,23 +71,30 @@ textarea:read-only{color:var(--mute)}
 #dlink{color:var(--acc);font-weight:600}
 #cp{background:none;border:0;color:var(--mute);padding:0 4px;font:14px system-ui,sans-serif;line-height:1}
 #cp:hover{color:var(--fg)}
-#about,#lvm,#cfm,#pwm,#ul{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(0,0,0,.45)}
-#ab-card,#lv-card,#cf-card,#pw-card,#ul-card{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:420px;width:100%;font:14px/1.6 system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}
-#ab-card h2,#lv-card h2,#cf-card h2,#pw-card h2,#ul-card h2{font:600 17px Georgia,serif;margin:0}
-#ab-card p,#lv-card p,#cf-card p,#pw-card p,#ul-card p{margin:0}
-#ul-card input{width:100%}
+#about,#lvm,#cfm,#pwm{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(0,0,0,.45)}
+#ab-card,#lv-card,#cf-card,#pw-card{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:420px;width:100%;font:14px/1.6 system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}
+#ab-card h2,#lv-card h2,#cf-card h2,#pw-card h2{font:600 17px Georgia,serif;margin:0}
+#ab-card p,#lv-card p,#cf-card p,#pw-card p{margin:0}
 #pw-card{border-color:var(--warn);max-height:calc(100vh - 32px);overflow:auto}
 #pw-card h2{color:var(--warn);font-size:19px}
 #pw-card ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
 #pw-card .ok{color:var(--ok)}
 #pw-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 #ab-card button,#lv-card button{align-self:flex-start;margin-top:4px}
+aside{display:none;width:260px;border-left:1px solid var(--line);background:var(--panel);overflow:auto;font-family:system-ui,sans-serif;font-size:13px}
+aside.open{display:block}
+aside h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:0;padding:12px 14px}
+.it{padding:9px 14px;border-top:1px solid var(--line)}
+.it b{display:block;font-weight:600}
+.it span{color:var(--mute);display:block;margin:2px 0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it button{padding:3px 9px;font-size:12px}
+@media(max-width:720px){aside.open{position:fixed;right:0;top:env(safe-area-inset-top,0px);bottom:0;z-index:5;width:min(300px,86vw);padding-right:env(safe-area-inset-right,0px)}}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 body{overscroll-behavior:none}
 body.kb{height:calc(var(--app-h) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 /* Typing mode: while the on-screen keyboard is open, keep only the clock, the word count and the text box */
 body.kb header{padding-block:4px;gap:6px}
-body.kb header #th,body.kb header #exp,body.kb header #nw,body.kb header h1{display:none}
+body.kb header #hb,body.kb header #th,body.kb header #exp,body.kb header #nw,body.kb header h1{display:none}
 body.kb #errbar,body.kb #cfgwarn,body.kb #bn,body.kb #lk,body.kb #chk{display:none}
 body.kb main{margin-top:2px}
 body.kb #wc{padding:3px 0;gap:0;border-top:0}
@@ -105,13 +111,15 @@ body.kb.kbr #wc-s{display:block}
 body.kb.kbr #wbar{display:block}
 body.kb.kbr #prd{display:none}
 textarea{-webkit-appearance:none;appearance:none;border-radius:0}
-body:not(.run) #exp,body:not(.run) #nw{display:none}
+body:not(.run) #exp,body:not(.run) #hb,body:not(.run) #nw{display:none}
 #chk{font:13px/1.5 system-ui,sans-serif;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-top:8px;background:var(--panel)}
 #chk p{margin:0 0 8px}
 #chkout{white-space:pre-wrap;word-break:break-word;margin:8px 0 0;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace}
 #errbar{font:13px system-ui,sans-serif;background:var(--late-bg);color:var(--late);border-radius:6px;padding:8px 12px;margin-top:8px}
 #cfgwarn{font:13px system-ui,sans-serif;background:var(--late-bg);color:var(--late);border-radius:6px;padding:8px 12px;margin-top:8px}
 body.run #clock{margin-right:auto}
+aside h2{display:flex;align-items:center;justify-content:space-between;gap:8px}
+aside h2 button{font-size:12px;text-transform:none;letter-spacing:0;padding:4px 10px}
 #dshare{padding:2px 10px;font-size:12px}
 @media (pointer:coarse){button,input,select{min-height:44px}#cp{min-width:44px;min-height:44px}.it button{min-height:36px}}
 @media (max-width:600px){
@@ -133,6 +141,7 @@ body.run #clock{margin-right:auto}
   <button class="p" id="start">Start session</button>
   <div id="clock" hidden><span id="tm">00:00</span><span id="tl">remaining</span></div>
   <button id="th" type="button">Dark mode</button>
+  <button id="hb">History</button>
   <button class="p" id="sub">Submit</button>
   <button id="exp">Save zip copy</button>
   <button id="nw">New session</button>
@@ -140,8 +149,7 @@ body.run #clock{margin-right:auto}
 <div id="bar" aria-hidden="true"><i id="bi"></i></div>
 <div id="errbar" role="alert" hidden></div>
 <div id="cfgwarn" role="alert" hidden>Setup needed: the Supabase URL and key are missing in config.js, so Submit cannot send anything yet. Add them and redeploy.</div>
-<div id="lk" role="alert" hidden>Writing is blocked because you left the session twice. Your text so far is kept and you can still submit it. <button id="lk-unlock" type="button">Teacher unlock</button></div>
-<div id="sp" role="alert" hidden>Writing is paused because split screen or a floating window is active. Return to full screen to continue.</div>
+<div id="lk" role="alert" hidden>Writing is blocked because you left the session twice. Your text so far is kept and you can still submit it.</div>
 <div id="bn" role="status" hidden>Time is up. You have 5 extra minutes. After that, writing will be blocked.</div>
 <details id="prd" open hidden><summary>Writing prompt</summary><div id="prt"></div></details>
 <section id="chk" hidden>
@@ -151,7 +159,7 @@ body.run #clock{margin-right:auto}
 </section>
 <main>
   <div id="w">
-    <textarea id="ta" readonly translate="no" lang="en" dir="ltr" placeholder="Choose the session length, enter your name, then press Start. The timer begins straight away and the writing prompt appears. Pasting is disabled." spellcheck="false" inputmode="text" enterkeyhint="enter" writingsuggestions="false" autocomplete="off" autocorrect="off" autocapitalize="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
+    <textarea id="ta" readonly translate="no" lang="en" dir="ltr" placeholder="Choose the session length, enter your name, then press Start. The timer begins straight away and the writing prompt appears. Pasting is disabled." spellcheck="false" inputmode="email" enterkeyhint="enter" writingsuggestions="false" autocomplete="off" autocorrect="off" autocapitalize="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
     <div id="wc">
       <div id="wc-top">
         <strong id="wc-n">0 words</strong>
@@ -163,6 +171,7 @@ body.run #clock{margin-right:auto}
     </div>
     <div id="st"><span id="info">0 words</span><span><span id="msg" role="status" aria-live="polite"></span> <a id="dlink" href="#" hidden></a> <button id="dshare" hidden>Save or share</button></span><span><span id="ty">Typing time 00:00</span> <button id="cp" aria-label="Copyright and disclaimer" title="Copyright and disclaimer">©</button></span></div>
   </div>
+  <aside id="side"><h2>Session history <button id="hx">Close</button></h2><div id="list"></div></aside>
 </main>
 
 <div id="lvm" role="alertdialog" aria-modal="true" aria-labelledby="lv-t" hidden>
@@ -187,22 +196,11 @@ body.run #clock{margin-right:auto}
     <h2 id="pw-t">⚠ Warning: read before you start</h2>
     <p>The timer starts the moment you press the button below. During the session:</p>
     <ul>
-      <li><b>Do not leave this page.</b> Do not switch to another app, tab or window. Floating windows, split screen and multiple screens are not allowed. The first time you will get a warning and the second time writing will be blocked</li>
+      <li><b>Do not leave this page.</b> Do not switch to another app, tab or window or writing will be blocked</li>
       <li>Avoid using another device as it will be detected and reported to the teacher.</li>
-      <li>Locking the phone or letting its display sleep does not count as leaving. The timer continues to run.</li>
       <li class="ok">Best of luck!</li>
     </ul>
     <div id="pw-row"><button class="p" id="pw-go">I understand, start writing</button><button id="pw-no">Go back</button></div>
-  </div>
-</div>
-
-<div id="ul" role="dialog" aria-modal="true" aria-labelledby="ul-t" hidden>
-  <div id="ul-card">
-    <h2 id="ul-t">Teacher unlock</h2>
-    <p>Enter the teacher password to unblock writing.</p>
-    <input id="ul-pass" type="password" autocomplete="off" aria-label="Teacher password">
-    <p id="ul-err" role="alert" hidden></p>
-    <div><button class="p" id="ul-go">Unlock writing</button><button id="ul-no">Cancel</button></div>
   </div>
 </div>
 
@@ -453,11 +451,11 @@ function reportBlocks(S,A,now){
     ['Word range set by participant',S.wmin+' to '+S.wmax+' words'],
     ['Characters in the final notes',String(A.chars)],
     ['Characters in the final notes typed after '+LL,String(A.lateChars)],
-    ['Times the participant left the session',S.leaves?S.leaves+' ('+S.leaveLog.map(function(r){return 'at '+fmt(r.t)+', away '+fmt(r.away||0)+(r.why?', '+r.why:'')}).join('; ')+')':'0'],
+    ['Times the participant left the session',S.leaves?S.leaves+' ('+S.leaveLog.map(function(r){return 'at '+fmt(r.t)+', away '+fmt(r.away||0)}).join('; ')+')':'0'],
     ['Screen-off or idle page hides (not counted as leaving)',String(S.sleeps||0)],
-    ['Screen off, locked or page hidden (not counted as leaving)',S.hides&&S.hides.length?S.hides.length+' ('+S.hides.map(function(r){return 'at '+fmt(r.t)+', for '+fmt(r.away||0)+(r.maybe?', focus was lost first: possible app switch':'')}).join('; ')+')':'0'],
     ['Writing blocked after leaving twice',S.blocked?'Yes':'No'],
-    ['Teacher unlocks',String(S.unlocks||0)]
+    ['History snapshots saved',String(S.hist.length)],
+    ['Restores from history',S.restores.length?S.restores.length+' (at '+S.restores.map(function(r){return fmt(r.t)}).join(', ')+')':'0']
   ]}});
   H('Sentences and clauses');
   function avg(a,b){return b>0?(a/b).toFixed(1):'–'}
@@ -535,13 +533,13 @@ async function aesZip(files,password){
 <script>
 (function(){
 var $=function(i){return document.getElementById(i)};
-var PASSCODE='research001',TEACHER_PASSWORD='research002',KEY='dct_v1';
-var ta=$('ta'),S=fresh(),over=false,timer=null,tickN=0,dirty=false,armed=null,msgT=null,audio=null,warned=false,grace=0,hideAt=0,warned1=false,mw=false,hadFocus=document.hasFocus(),unf=0,szs=0,vid=null,vf=false,layoutBase=null;
-function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],fn:'',ln:'',exported:null,limit:25,wmin:150,wmax:300,leaves:0,leaveLog:[],blocked:false,pending:0,done:false,prompt:'',sleeps:0,locked:false,hides:[],unlocks:0,nextBlockAt:2}}
+var PASSCODE='research001',KEY='dct_v1';
+var ta=$('ta'),S=fresh(),over=false,timer=null,tickN=0,dirty=false,armed=null,msgT=null,audio=null,warned=false,grace=0,hideAt=0,warned1=false,mw=false,hadFocus=document.hasFocus(),unf=0,szs=0,vid=null,vf=false;
+function fresh(){return {sid:null,start:null,text:'',meta:[],keys:[],late:[],hist:[],restores:[],fn:'',ln:'',exported:null,limit:25,wmin:150,wmax:300,leaves:0,leaveLog:[],blocked:false,pending:0,done:false,prompt:'',sleeps:0,locked:false}}
 var EXTRA=5*60000;
 function lockTime(quiet){
   S.locked=true;ta.readOnly=true;save();overUi(Date.now()-S.start,limMs(S));
-  if(!quiet){ta.blur();$('lv-t').textContent='Writing is now blocked';$('lv-p').textContent='Your 5 extra minutes are over, so you can no longer write. Your text is kept and you can still submit it.';$('lv-x').textContent='I understand';$('lvm').hidden=false;$('lv-x').focus()}
+  if(!quiet){ta.blur();$('lv-t').textContent='Writing is now blocked';$('lv-p').textContent='Your 5 extra minutes are over, so you can no longer write. Your text is kept and you can still submit it.';$('lvm').hidden=false;$('lv-x').focus()}
 }
 var lastOv='';
 function overUi(el,L){
@@ -568,8 +566,6 @@ function load(){
     var r=localStorage.getItem(KEY);if(!r)return;
     var o=JSON.parse(r);if(!o||typeof o!=='object')return;
     for(var k in S)if(o[k]!==undefined)S[k]=o[k];
-    if(!(S.nextBlockAt>=2))S.nextBlockAt=2;
-    if(!(S.unlocks>=0))S.unlocks=0;
     S.meta=typeof o.meta==='string'?o.meta.split('').map(Number):[];
     if(S.meta.length!==S.text.length){S.meta=[];for(var i=0;i<S.text.length;i++)S.meta.push(0)}
   }catch(e){}
@@ -597,14 +593,10 @@ ta.addEventListener('dragover',function(e){e.preventDefault()});
 ta.addEventListener('contextmenu',function(e){e.preventDefault()});
 ta.addEventListener('beforeinput',function(e){if(BAD.indexOf(e.inputType)>-1)e.preventDefault()});
 ta.addEventListener('keydown',function(e){
-  var k=String(e.key||'').toLowerCase();
+  var k=e.key.toLowerCase();
   if(((e.ctrlKey||e.metaKey)&&k==='v')||(e.shiftKey&&k==='insert'))e.preventDefault();
 });
-if(typeof Object.assign!=='function'){Object.assign=function(t){for(var i=1;i<arguments.length;i++){var o=arguments[i];if(o)for(var k in o)if(Object.prototype.hasOwnProperty.call(o,k))t[k]=o[k]}return t}}
-var preS=0,preE=0,hasPre=false,lastS=0,lastE=0,composing=false;
-ta.addEventListener('compositionstart',function(){composing=true});
-ta.addEventListener('compositionend',function(){composing=false});
-ta.addEventListener('blur',function(){composing=false});
+var preS=0,preE=0,hasPre=false,lastS=0,lastE=0;
 ta.addEventListener('beforeinput',function(){preS=ta.selectionStart;preE=ta.selectionEnd;hasPre=true});
 function selSync(){if(document.activeElement===ta){lastS=ta.selectionStart;lastE=ta.selectionEnd}}
 document.addEventListener('selectionchange',selSync);
@@ -619,17 +611,13 @@ ta.addEventListener('input',function(e){
   if(S.start===null||S.blocked||S.locked||mw){undoEdit();return}
   var v=ta.value,g=diff(S.text,v),pS=hasPre?preS:lastS,pE=hasPre?preE:lastE,bad=false,ty=(e&&e.inputType)||'';
   if(g.ins.length||g.del.length){
-    /* Only block what a keyboard cannot do: Arabic letters, long insertions, or edits far from the cursor.
-       Normal typing, a space after a word, the double-space full stop and suggestion taps are allowed. */
-    var NEAR=40;
     if(ARAB.test(g.ins)||g.ins.length>25)bad=true;
     else if(g.ins.length&&!g.del.length){
-      if(g.p<pS-NEAR||g.p>pE+NEAR)bad=true;
+      if(pE<=pS&&(pS<g.p||pS>g.p+g.ins.length))bad=true;
     }else if(g.ins.length&&g.del.length){
-      if(g.del.length>25||g.p<pS-NEAR||g.p>pE+NEAR)bad=true;
-    }else if(g.del.length>=2&&pE<=pS&&!/^delete(Content|Word|SoftLine|HardLine|ByCut)/.test(ty)&&!/^insertComposition|^insertText|^insertCompositionText/.test(ty)&&(g.p+g.del.length<pS-NEAR||g.p>pE+NEAR))bad=true;
+      if(!(pE>pS)||g.p<pS||g.p>pE)bad=true;
+    }else if(g.del.length>=2&&pE<=pS&&!/^delete(Content|Word|SoftLine|HardLine|ByCut)/.test(ty))bad=true;
   }
-  if(composing||(e&&e.isComposing))bad=false;
   if(bad){undoEdit();return}
   hasPre=false;
   applyChange(S,v,Date.now());
@@ -659,7 +647,7 @@ function tick(){
   if(wOn&&!warned1){warned1=true;beep();say('One minute left.')}
   if(el>=L&&!over){
     over=true;document.body.classList.add('over');$('bn').hidden=false;beep();
-    $('lv-t').textContent='Time is up';$('lv-p').textContent='You now have 5 extra minutes. Anything you type is recorded as typed after the allotted time. When the 5 minutes are over, writing will be blocked.';$('lv-x').textContent='I understand';$('lvm').hidden=false;$('lv-x').focus();
+    $('lv-t').textContent='Time is up';$('lv-p').textContent='You now have 5 extra minutes. Anything you type is recorded as typed after the allotted time. When the 5 minutes are over, writing will be blocked.';$('lvm').hidden=false;$('lv-x').focus();
   }
   if(over)overUi(el,L);
   mwCheck();
@@ -688,14 +676,13 @@ function stats(){
 }
 function begin(){
   $('start').hidden=true;$('durl').hidden=true;$('clock').hidden=false;ta.readOnly=!!(S.blocked||S.locked);document.body.classList.add('run');showPrompt();lock();leaveNotice();
-  rememberFullLayout();
   var el=Date.now()-S.start;
   warned1=(limMs(S)-el)<=60000;lastOv='';
   if(el>=limMs(S)){over=true;document.body.classList.add('over');$('bn').hidden=false;if(el>=limMs(S)+EXTRA&&!S.locked){S.locked=true;ta.readOnly=true;save()}}
   clearInterval(timer);timer=setInterval(tick,250);tick();
 }
 function resetSubmit(){
-  $('lk').hidden=true;$('sp').hidden=true;$('lvm').hidden=true;$('cfm').hidden=true;$('ul').hidden=true;hideAt=0;
+  $('lk').hidden=true;$('lvm').hidden=true;$('cfm').hidden=true;hideAt=0;
   var b=$('sub');b.textContent='Submit';b.disabled=false;
   $('errbar').hidden=true;$('dlink').hidden=true;$('dshare').hidden=true;$('msg').textContent='';
 }
@@ -714,11 +701,6 @@ $('pw-go').onclick=function(){
   pwOpen(false);
   if(S.start!==null)return;
   var dm=durGet();if(!dm)return;
-  if(multiScreen()||sizeFlag()){
-    $('lv-t').textContent='Cannot start yet';
-    $('lv-p').textContent=multiScreen()?'More than one screen is connected. Disconnect the extra screen, then start again.':'This page is in split screen, a floating window or a resized window. Make it full screen, then start again.';
-    $('lv-x').textContent='I understand';$('lvm').hidden=false;$('lv-x').focus();return;
-  }
   try{audio=new (window.AudioContext||window.webkitAudioContext)();if(audio.resume)audio.resume()}catch(e){}
   S=Object.assign(fresh(),{fn:S.fn,ln:S.ln,limit:dm,wmin:S.wmin,wmax:S.wmax,prompt:cfgPrompt()});resetSubmit();
   S.start=Date.now();ta.value='';save();begin();ta.focus();
@@ -727,6 +709,36 @@ $('pw-go').onclick=function(){
 /* ---- Names ---- */
 function names(){S.fn=$('fn').value;S.ln=$('ln').value;dirty=true}
 $('fn').addEventListener('input',names);$('ln').addEventListener('input',names);
+
+/* ---- History: snapshots are appended, never overwritten ---- */
+function snap(force){
+  var last=S.hist.length?S.hist[S.hist.length-1].text:'';
+  if(!force&&S.text===last)return;
+  S.hist.push({t:Date.now(),text:S.text,meta:S.meta.indexOf(1)>-1?S.meta.join(''):''});
+  save();renderHist();
+}
+setInterval(function(){if(S.start!==null)snap(false)},120000);
+function renderHist(){
+  var l=$('list');l.innerHTML='';
+  if(!S.hist.length){l.innerHTML='<div class="it"><span>No snapshots yet. One is saved every 2 minutes.</span></div>';return}
+  for(var i=S.hist.length-1;i>=0;i--){(function(i){
+    var h=S.hist[i],d=document.createElement('div');d.className='it';
+    var b=document.createElement('b');b.textContent='#'+(i+1)+' · '+new Date(h.t).toLocaleTimeString();
+    var s=document.createElement('span');s.textContent=h.text.slice(0,60)||'(empty)';
+    var btn=document.createElement('button');btn.textContent='Restore';
+    btn.onclick=function(){
+      if(S.start===null||S.blocked||S.locked)return;
+      snap(false);
+      S.text=h.text;
+      S.meta=h.meta?h.meta.split('').map(Number):h.text.split('').map(function(){return 0});
+      S.restores.push({t:Date.now()-S.start,n:i+1});
+      ta.value=S.text;snap(true);stats();say('Restored snapshot #'+(i+1)+'. The restore is noted in the report.');
+    };
+    d.appendChild(b);d.appendChild(s);d.appendChild(btn);l.appendChild(d);
+  })(i)}
+}
+$('hb').onclick=function(){$('side').classList.toggle('open')};
+$('hx').onclick=function(){$('side').classList.remove('open')};
 
 /* ---- Export: notes and report, both inside one encrypted zip ---- */
 /* ---- Supabase submission (active only when config.js has a project URL and key) ---- */
@@ -782,7 +794,7 @@ async function submitRemote(c,base,notes,rep,A,now){
     metrics:{words:A.words,characters:A.chars,sentences:A.sn.a+A.sn.b,clauses_estimated:A.cl.a+A.cl.b,
       typing_seconds_within:Math.round(A.actIn/1000),typing_seconds_after:Math.round(A.actLate/1000),
       typed_within:A.insIn,typed_after:A.insLate,deleted_within:A.delIn,deleted_after:A.delLate,
-      word_min:S.wmin,word_max:S.wmax,left_session:S.leaves,writing_blocked:!!S.blocked,teacher_unlocks:S.unlocks||0,pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),late_characters_remaining:A.lateChars,page_hidden:(S.hides||[]).length,possible_app_switches:(S.hides||[]).filter(function(r){return r.maybe}).length},
+      word_min:S.wmin,word_max:S.wmax,left_session:S.leaves,writing_blocked:!!S.blocked,pauses_over_5s:A.pauses,longest_pause_seconds:Math.round(A.longest/1000),restores:S.restores.length,late_characters_remaining:A.lateChars},
     notes_path:np,report_path:rp,user_agent:(navigator.userAgent||'').slice(0,200)
   };
   try{await sbFetch(root+'/rest/v1/sessions',{method:'POST',headers:sbHead(c,{'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(row)})}catch(e){e.where='saving the text and measures';throw e}
@@ -810,7 +822,7 @@ async function doExport(mode,btn){
   if(!f||!l){say('Enter first and last name first.');return}
   if(S.start===null){say('Start the session first.');return}
   if(!window.crypto||!crypto.subtle){say('Encryption is not available in this browser view. Open the file directly in Chrome, Edge, Firefox or Safari.');return}
-  save();
+  snap(false);save();
   grace=Date.now()+20000;
   var old=btn.textContent;btn.disabled=true;btn.textContent=mode==='submit'?'Submitting…':'Preparing…';
   try{
@@ -861,9 +873,9 @@ $('nw').onclick=function(){
   if(armed){
     clearTimeout(armed);armed=null;clearInterval(timer);
     var n={fn:S.fn,ln:S.ln,limit:limMin(S),wmin:S.wmin,wmax:S.wmax};S=Object.assign(fresh(),n);over=false;resetSubmit();
-    document.body.classList.remove('over','run','warn');warned1=false;mw=false;unf=0;szs=0;exs=0;unlock();$('bn').hidden=true;$('clock').hidden=true;$('start').hidden=false;$('durl').hidden=false;durSet(limMin(S));
+    document.body.classList.remove('over','run','warn');warned1=false;mw=false;unf=0;szs=0;unlock();$('bn').hidden=true;$('clock').hidden=true;$('start').hidden=false;$('durl').hidden=false;durSet(limMin(S));
     showPrompt();$('bi').style.width='0';ta.value='';ta.readOnly=true;$('ty').textContent='Typing time 00:00';
-    b.textContent='New session';save();stats();say('Ready for a new session.');
+    b.textContent='New session';save();renderHist();stats();say('Ready for a new session.');
     return;
   }
   b.textContent=(S.exported?'':'Not exported yet. ')+'Click again to erase everything';
@@ -893,130 +905,52 @@ $('ab-x').onclick=function(){aboutOpen(false)};
 $('about').addEventListener('click',function(e){if(e.target===$('about'))aboutOpen(false)});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('about').hidden)aboutOpen(false)});
 
-window.addEventListener('beforeunload',function(e){save();if(S.start!==null&&!S.done){e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',function(){if(S.start!==null){snap(false)}save()});
 function leaveNotice(){
   $('lk').hidden=!(S.start!==null&&S.blocked);
   if(S.start===null||!S.pending)return;
   var b=S.pending===2;S.pending=0;save();
   $('lv-t').textContent=b?'Writing is now blocked':'Warning: you left the session';
-  $('lv-p').textContent=b?'You left this page again, so writing is blocked. A teacher can unlock it with the teacher password. Your text so far is kept and you can still submit it.':'You left this page (another app, tab or window, split screen, a floating window or an extra screen). The timer kept running. If you leave again, writing will be blocked.';
-  $('lv-x').textContent=b?'Teacher unlock':'I understand';
+  $('lv-p').textContent=b?'You left this page a second time, so you can no longer write in this session. Your text so far is kept and you can still submit it.':'You switched away from this page. The timer kept running. If you leave again, you will not be able to write any more in this session.';
   $('lvm').hidden=false;$('lv-x').focus();
 }
-$('lv-x').onclick=function(){
-  $('lvm').hidden=true;
-  if(S.blocked&&!S.locked){unlockOpen(true);return}
-  if(!S.blocked&&!S.locked)ta.focus();
-};
-function unlockOpen(open){
-  $('ul').hidden=!open;
-  $('ul-err').hidden=true;$('ul-err').textContent='';
-  if(open){$('ul-pass').value='';$('ul-pass').focus()}
-}
-$('ul-no').onclick=function(){unlockOpen(false)};
-$('lk-unlock').onclick=function(){unlockOpen(true)};
-$('ul-go').onclick=function(){
-  if($('ul-pass').value!==TEACHER_PASSWORD){$('ul-err').textContent='Incorrect password.';$('ul-err').hidden=false;$('ul-pass').focus();return}
-  S.blocked=false;S.pending=0;S.unlocks=(S.unlocks||0)+1;S.nextBlockAt=S.leaves+1;
-  ta.readOnly=!!S.locked;$('lk').hidden=true;unlockOpen(false);save();
-  say('Writing has been unlocked by the teacher.');
-  if(!ta.readOnly)ta.focus();
-};
-$('ul-pass').addEventListener('keydown',function(e){if(e.key==='Enter')$('ul-go').click()});
-$('ul').addEventListener('click',function(e){if(e.target===$('ul'))unlockOpen(false)});
+$('lv-x').onclick=function(){$('lvm').hidden=true;if(!S.blocked&&!S.locked)ta.focus()};
 /* Screen sleep and phone lock hide the page without the window first losing focus.
    Switching app, tab or window loses focus first, so only that counts as leaving. */
 var lastAct=Date.now(),rafAt=Date.now();
 ['touchstart','pointerdown','keydown','beforeinput','input','touchmove','wheel','scroll'].forEach(function(n){document.addEventListener(n,function(){lastAct=Date.now()},true)});
 (function rl(){rafAt=Date.now();requestAnimationFrame(rl)})();
-var blurAt=0,dhAt=0,mobileHideAt=0,mobileHiddenWithoutBlur=false;
-/* A screen lock hides the page at (almost) the same moment the window loses focus.
-   Leaving for another app or tab loses focus noticeably earlier (switcher animation, gesture), or the
-   student comes straight back. Tune these two numbers if a phone model behaves differently. */
-var DRAFT_GAP_MS=180,DRAFT_QUICK_BACK_MS=2500,PHONE_IDLE_SLEEP_MS=45000,countedHide=false;
-/* Phones and tablets (including iPadOS, which reports itself as a Mac). */
-function isMobile(){
-  try{
-    if(window.matchMedia&&matchMedia('(pointer:coarse)').matches)return true;
-    if(/Android|iPhone|iPad|iPod|Mobile|Silk/i.test(navigator.userAgent||''))return true;
-    if((navigator.maxTouchPoints||0)>1&&/Mac/.test(navigator.platform||''))return true;
-  }catch(e){}
-  return false;
-}
-function addLeave(why){
-  var now=Date.now();
-  if(!S.blocked){
-    hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0,why:why});
-    if(S.leaves>=S.nextBlockAt){S.blocked=true;S.pending=2}else S.pending=1;
-  }
-}
-window.addEventListener('blur',function(){blurAt=Date.now();setTimeout(mwCheck,350);setTimeout(mwCheck,1300);setTimeout(mwCheck,2700)});
+var blurAt=0;
+window.addEventListener('blur',function(){blurAt=Date.now();setTimeout(mwCheck,1300)});
 window.addEventListener('focus',function(){blurAt=0;hadFocus=true;mwCheck()});
-function splitPauseNow(){if(S.start!==null&&!S.done&&sizeFlag()){ta.readOnly=true;$('sp').hidden=false}}
-window.addEventListener('resize',function(){splitPauseNow();setTimeout(mwCheck,350);setTimeout(mwCheck,1300)});
-window.addEventListener('orientationchange',function(){setTimeout(function(){if(!sizeFlag())rememberFullLayout();mwCheck()},500);setTimeout(mwCheck,1500)});
-try{if(window.visualViewport)window.visualViewport.addEventListener('resize',function(){splitPauseNow();setTimeout(mwCheck,350);setTimeout(mwCheck,1300)})}catch(e){}
-if(!('onvisibilitychange' in document)&&'onwebkitvisibilitychange' in document){document.addEventListener('webkitvisibilitychange',function(){var ev=document.createEvent('Event');ev.initEvent('visibilitychange',true,true);document.dispatchEvent(ev)})}
-var kbT=0;
-['focus','focusin','focusout','touchstart','keydown','input'].forEach(function(n){ta.addEventListener(n,function(){kbT=Date.now()})});
-function rememberFullLayout(){
-  try{if(isMobile()&&!sizeFlag())layoutBase={w:window.innerWidth,h:window.innerHeight,land:window.innerWidth>window.innerHeight}}catch(e){}
-}
+window.addEventListener('resize',function(){setTimeout(mwCheck,1300)});
 function sizeFlag(){
   try{
-    if(!isMobile())return false;
+    if(!matchMedia('(pointer:coarse)').matches)return false;
     var sw=screen.width,sh=screen.height,iw=window.innerWidth,ih=window.innerHeight;
     if(!sw||!sh)return false;
     var lo=Math.min(sw,sh),hi=Math.max(sw,sh),land=iw>ih;
-    /* Width is unaffected by a keyboard, so a narrowed phone view is always split/floating. */
-    if(iw<(land?hi:lo)*0.82)return true;
-    var ow=window.outerWidth,oh=window.outerHeight;
+    if(iw<(land?hi:lo)*0.85)return true;
     var a=document.activeElement,typing=a&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT');
-    var vv=window.visualViewport,keyboard=typing&&vv&&vv.height<ih-100;
-    if(ow>0&&oh>0&&ow<(land?hi:lo)*0.82)return true;
-    /* A short full-layout height, when no keyboard is open, indicates a horizontal split. */
-    if(layoutBase&&land===layoutBase.land&&ih<layoutBase.h*.68&&!keyboard)return true;
-    if(!layoutBase&&!keyboard&&ih<(land?lo:hi)*0.55)return true;
+    if(!typing&&ih<(land?lo:hi)*0.55)return true;
   }catch(e){}
   return false;
 }
-/* Old Android/iOS browsers only expose the prefixed visibility API. */
-if(document.hidden===undefined&&document.webkitHidden!==undefined){try{Object.defineProperty(document,'hidden',{get:function(){return document.webkitHidden}})}catch(e){}}
-/* More than one screen connected (Chrome/Edge/Opera on PC). Other browsers do not expose this. */
-var exs=0;
-function multiScreen(){try{return !!(window.screen&&window.screen.isExtended)}catch(e){return false}}
-try{if(window.screen&&window.screen.addEventListener)window.screen.addEventListener('change',function(){setTimeout(mwCheck,300)})}catch(e){}
-/* Some phones freeze the page when the screen locks without firing visibilitychange (old Android
-   browsers, some WebViews). A gap between two checks means the page was frozen: forget any
-   focus loss seen before the freeze and give the window time to settle after it wakes. */
-var lastMw=0;
-function frozenGap(){
-  var n=Date.now();
-  if(lastMw&&n-lastMw>1500){unf=0;szs=0;exs=0;hadFocus=false;blurAt=0;grace=n+3000}
-  lastMw=n;
-}
-try{document.addEventListener('freeze',function(){lastMw=0});document.addEventListener('resume',function(){if(true){unf=0;szs=0;exs=0;hadFocus=false;blurAt=0;grace=Date.now()+3000}})}catch(e){}
 function mwCheck(){
-  frozenGap();
-  if(S.start===null||S.done||document.hidden||Date.now()<grace){unf=0;szs=0;exs=0;return}
+  if(S.start===null||S.done||document.hidden||Date.now()<grace){unf=0;szs=0;return}
   var now=Date.now(),f=document.hasFocus();
-  if(now-rafAt>800){unf=0;szs=0;exs=0;return}
+  if(now-rafAt>800){unf=0;szs=0;return}
   if(f){hadFocus=true;unf=0}else if(hadFocus){if(!unf)unf=now}
-  var split=sizeFlag();
-  $('sp').hidden=!split;
-  if(split){ta.readOnly=true;if(!szs)szs=now}else szs=0;
-  if(!split&&!mw&&f)ta.readOnly=!!(S.blocked||S.locked);
-  if(multiScreen()){if(!exs)exs=now}else exs=0;
-  var ut=1200;
-  var m=(unf&&now-unf>=ut)||(szs&&now-szs>=1200)||(exs&&now-exs>=1200);
+  if(sizeFlag()){if(!szs)szs=now}else szs=0;
+  var m=(unf&&now-unf>=1200)||(szs&&now-szs>=1200);
   if(m&&!mw){
     mw=true;
     if(!S.blocked){
-      hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0,why:(exs&&now-exs>=1200)?'multiple screens':(szs&&now-szs>=1200)?'split, floating or resized screen':'window or app lost focus'});
-      if(S.leaves>=S.nextBlockAt){S.blocked=true;S.pending=2}else S.pending=1;
+      hideAt=now;S.leaves++;S.leaveLog.push({t:now-S.start,away:0});
+      if(S.leaves>=2){S.blocked=true;S.pending=2}else S.pending=1;
     }
     ta.readOnly=true;save();leaveNotice();
-  }else if(!m&&mw&&f&&!szs&&!exs){
+  }else if(!m&&mw&&f&&!szs){
     mw=false;
     if(hideAt&&S.leaveLog.length)S.leaveLog[S.leaveLog.length-1].away=now-hideAt;
     hideAt=0;ta.readOnly=!!(S.blocked||S.locked);save();
@@ -1024,58 +958,21 @@ function mwCheck(){
 }
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){
-    hadFocus=false;unf=0;szs=0;exs=0;
-    if(S.start===null||S.done){save();return}
-    /* A screen timeout, the power button and an app switch all hide the page. The difference a web page can
-       see is timing: a screen going dark hides the page at (almost) the same moment the window loses focus,
-       while leaving for another app loses focus clearly earlier. Only the second kind counts as leaving. */
-    var nowH=Date.now(),gap=blurAt?nowH-blurAt:-1;
-    /* iOS sometimes sends visibilitychange before blur when another app or tab opens. Keep this
-       short background interval as a fallback; an actual screen lock normally remains hidden longer. */
-    mobileHideAt=isMobile()?nowH:0;
-    mobileHiddenWithoutBlur=isMobile()&&!blurAt;
-    /* A phone display timeout or screen lock hides the page alongside focus loss. A deliberate app/tab
-       switch loses focus first, so only a measurable gap is treated as leaving. */
-    var phone=isMobile();
-    countedHide=false;
-    var idle=nowH-lastAct;
-    if(!S.blocked&&!mw&&nowH>=grace&&gap>=DRAFT_GAP_MS&&gap<3000){
-      addLeave('switched to another app or tab');countedHide=true;
-      ta.readOnly=!!(S.blocked||S.locked);dhAt=0;
-    }else if(phone&&!S.blocked&&!mw&&nowH>=grace&&idle<PHONE_IDLE_SLEEP_MS){
-      /* On phones the home screen, another app and a screen lock all hide the page at the same instant, so a
-         hide while the student was active counts as leaving. A hide after a long idle period is treated as
-         the phone going to sleep by itself and is not counted. */
-      addLeave('left the app or went to the home screen');countedHide=true;
-      ta.readOnly=!!(S.blocked||S.locked);dhAt=nowH;
-      S.hides=S.hides||[];S.hides.push({t:nowH-S.start,away:0,gap:gap,maybe:false});
-    }else{
-      hideAt=0;dhAt=nowH;S.sleeps=(S.sleeps||0)+1;
-      S.hides=S.hides||[];
-      var hr={t:dhAt-S.start,away:0,gap:gap,maybe:false};
-      S.hides.push(hr);
-    }
+    hadFocus=false;unf=0;szs=0;
+    if(S.start!==null&&!S.blocked&&!S.done&&!mw&&Date.now()>=grace){
+      if(blurAt&&Date.now()-blurAt<2500&&Date.now()-lastAct<8000){
+        hideAt=Date.now();S.leaves++;S.leaveLog.push({t:hideAt-S.start,away:0});
+        if(S.leaves>=2){S.blocked=true;S.pending=2;ta.readOnly=true}else S.pending=1;
+      }else{hideAt=0;S.sleeps=(S.sleeps||0)+1}
+    }else hideAt=0;
     save();
   }else{
-    var nowV=Date.now(),away=dhAt?nowV-dhAt:0;
-    if(dhAt&&S.hides&&S.hides.length)S.hides[S.hides.length-1].away=away;
-    dhAt=0;grace=nowV+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0;
-    /* On iOS, app/tab switching can hide the page before it emits blur. Count only a short
-       round trip in that case so ordinary screen sleep/locking remains exempt. */
-    var iosFallback=!countedHide&&isMobile()&&mobileHiddenWithoutBlur&&mobileHideAt&&away>=250&&away<8000;
-    mobileHideAt=0;mobileHiddenWithoutBlur=false;
-    /* Unlocking normally takes longer than a couple of seconds; a quick app/tab round trip does not. */
-    if(!countedHide&&(!isMobile()||iosFallback)&&S.start!==null&&!S.done&&!S.blocked&&away>0&&(isMobile()?away<8000:away<DRAFT_QUICK_BACK_MS)){
-      addLeave('left the page and came straight back');
-      ta.readOnly=!!(S.blocked||S.locked);
-    }
     lock();
     if(hideAt&&S.leaveLog.length){S.leaveLog[S.leaveLog.length-1].away=Date.now()-hideAt}
     hideAt=0;leaveNotice();save();
   }
 });
 window.addEventListener('pagehide',save);
-window.addEventListener('pageshow',function(){if(S.start!==null&&!S.done){grace=Date.now()+3000;hadFocus=false;unf=0;szs=0;exs=0;blurAt=0;lock()}});
 
 /* ---- Phones: keep the screen awake and keep the page above the on-screen keyboard ---- */
 var wl=null;
@@ -1087,17 +984,9 @@ function awake(){
       vid=document.createElement('video');
       vid.muted=true;vid.loop=true;vid.setAttribute('playsinline','');vid.setAttribute('aria-hidden','true');vid.tabIndex=-1;
       vid.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none';
-      /* Silent keep-awake video. Chrome/Android can stream a canvas; iPhones cannot, so they use a tiny embedded looping clip instead. */
-      var streamed=false;
-      try{if(c.captureStream){vid.srcObject=c.captureStream(5);streamed=true}}catch(e){}
-      if(!streamed){
-        vid.setAttribute('muted','');vid.setAttribute('loop','');vid.setAttribute('webkit-playsinline','');
-        var s1=document.createElement('source');s1.src='data:video/mp4;base64,AAAAHGZ0eXBpc281AAACAGlzbzVpc282bXA0MQAAAudtb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAAPoAAAAAAABAAABAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAB6XRyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAEAAAABAAAAAAAYVtZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAAEAAAAAAAFXEAAAAAAAtaGRscgAAAAAAAAAAdmlkZQAAAAAAAAAAAAAAAFZpZGVvSGFuZGxlcgAAAAEwbWluZgAAABR2bWhkAAAAAQAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAAA8HN0YmwAAACkc3RzZAAAAAAAAAABAAAAlGF2YzEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAEAAQAEgAAABIAAAAAAAAAAEVTGF2YzYwLjMxLjEwMiBsaWJ4MjY0AAAAAAAAAAAAAAAY//8AAAAuYXZjQwFCwAr/4QAWZ0LACtkewEQAAAMABAAAAwAQPEiZIAEABWjLg8sgAAAAEHBhc3AAAAABAAAAAQAAABBzdHRzAAAAAAAAAAAAAAAQc3RzYwAAAAAAAAAAAAAAFHN0c3oAAAAAAAAAAAAAAAAAAAAQc3RjbwAAAAAAAAAAAAAAKG12ZXgAAAAgdHJleAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAAAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjAuMTYuMTAwAAAAeG1vb2YAAAAQbWZoZAAAAAAAAAABAAAAYHRyYWYAAAAcdGZoZAACADgAAAABAAAgAAAAAoMBAQAAAAAAFHRmZHQBAAAAAAAAAAAAAAAAAAAodHJ1bgAAAgUAAAAEAAAAgAIAAAAAAAKDAAAACgAAAAoAAAAJAAACqG1kYXQAAAJwBgX//2zcRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY0IHIzMTA4IDMxZTE5ZjkgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDIzIC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MyBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgxOjB4MTExIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD0yNTAga2V5aW50X21pbj0yIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAC2WIhAU8mKAAP7+AAAAABkGaOAp6gAAAAAZBmlQCnqAAAAAFQZpgEvUAAABDbWZyYQAAACt0ZnJhAQAAAAAAAAEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAwMBAQEAAAAQbWZybwAAAAAAAABD';s1.type='video/mp4';
-        var s2=document.createElement('source');s2.src='data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAInEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggIR7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiECfQAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYjzEe746l3EAJyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhB3NZQDgibCBELqBEJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYjzEe746l3EAGfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDIuMDAwMDAwMDAwAB9DtnXt54EAo6OBAACAEAIAnQEqEAAQAABHCIWFiIWEiAICAAwNYAD+/6tQgKOVgQH0ALEBAAUQrAAYABhYL/QACAAAo5WBA+gAsQEABRCsABgAGFgv9AAIAACjlYEF3ACxAQAFEKwAGAAYWC/0AAgAABxTu2uRu4+zgQC3iveBAfGCAZ/wgQM=';s2.type='video/webm';
-        vid.appendChild(s1);vid.appendChild(s2);
-      }
+      vid.srcObject=c.captureStream(5);
       document.body.appendChild(vid);
-      if(streamed)setInterval(function(){vf=!vf;x.fillStyle=vf?'#000':'#010101';x.fillRect(0,0,2,2)},400);
+      setInterval(function(){vf=!vf;x.fillStyle=vf?'#000':'#010101';x.fillRect(0,0,2,2)},400);
     }
     if(vid.paused)vid.play().catch(function(){});
   }catch(e){}
@@ -1223,7 +1112,7 @@ $('wmax').addEventListener('input',function(){rangeRead(false)});
 $('wmin').addEventListener('change',function(){rangeRead(true)});
 $('wmax').addEventListener('change',function(){rangeRead(true)});
 rangeInit();
-$('fn').value=S.fn;$('ln').value=S.ln;ta.value=S.text;stats();
+$('fn').value=S.fn;$('ln').value=S.ln;ta.value=S.text;renderHist();stats();
 if(S.start!==null)begin();
 })();
 </script>
